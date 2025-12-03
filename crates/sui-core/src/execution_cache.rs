@@ -612,6 +612,12 @@ pub trait ExecutionCacheWrite: Send + Sync {
     /// transaction outputs.
     #[cfg(test)]
     fn write_object_entry_for_test(&self, object: Object);
+    // === 新增方法 ===
+    // Reload objects into the cache (for IPC hot update)
+    fn reload_objects(&self, objects: Vec<(ObjectID, Object)>);
+
+    /// Update underlying store and optionally clear cache
+    fn update_underlying(&self, clear_cache: bool);
 }
 
 pub trait CheckpointCache: Send + Sync {

@@ -413,6 +413,14 @@ impl CachedCommittedData {
         assert!(self.executed_effects_digests.is_empty());
         assert_empty(&self._transaction_objects);
     }
+    fn clear(&self) {
+        self.object_cache.invalidate_all();
+        self.marker_cache.invalidate_all();
+        self.transactions.invalidate_all();
+        self.transaction_effects.invalidate_all();
+        self.transaction_events.invalidate_all();
+        self.executed_effects_digests.invalidate_all();
+    }
 }
 
 fn assert_empty<K, V>(cache: &MokaCache<K, V>)
@@ -2250,6 +2258,30 @@ impl ExecutionCacheWrite for WritebackCache {
     #[cfg(test)]
     fn write_object_entry_for_test(&self, object: Object) {
         self.write_object_entry(&object.id(), object.version(), object.into());
+    }
+    // === 新增实现 ===
+    fn reload_objects(&self, objects: Vec<(ObjectID, Object)>) {
+        for (object_id, object) in objects {
+            let _ = self.object_by_id_cache.insert(
+                &object_id,
+                LatestObjectCacheEntry::Object(object.version(), object.into()),
+                Ticket::Write,
+            );
+        }
+    }
+
+    fn update_underlying(&self, clear_cache: bool) {
+        self.store
+            .perpetual_tables
+            .objects
+            .rocksdb
+            .try_catch_up_with_primary()
+            .unwrap();
+
+        if clear_cache {
+            self.cached.clear();
+            self.object_by_id_cache.invalidate_all();
+        }
     }
 }
 
