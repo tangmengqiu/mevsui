@@ -84,7 +84,7 @@ use sui_types::sui_system_state::{SuiSystemState, get_sui_system_state};
 use sui_types::transaction::{TransactionDataAPI, VerifiedSignedTransaction, VerifiedTransaction};
 use tap::TapOptional;
 use tracing::{debug, info, instrument, trace, warn};
-
+use typed_store::Map;
 use super::ExecutionCacheAPI;
 use super::cache_types::Ticket;
 use super::{
@@ -2274,7 +2274,6 @@ impl ExecutionCacheWrite for WritebackCache {
         self.store
             .perpetual_tables
             .objects
-            .rocksdb
             .try_catch_up_with_primary()
             .unwrap();
 
