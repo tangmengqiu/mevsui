@@ -422,6 +422,44 @@ impl AuthorityPerpetualTables {
         )
     }
 
+    /// Open tables in read-only mode, returning the same `AuthorityPerpetualTables` type.
+    /// This allows read-only access while maintaining the same API as the read-write version.
+    #[cfg(not(tidehunter))]
+    pub fn open_as_readonly(parent_path: &Path) -> Self {
+        let readonly = Self::get_read_only_handle(
+            Self::path(parent_path),
+            None,
+            None,
+            MetricConf::new("perpetual_readonly"),
+        );
+        #[allow(deprecated)]
+        Self {
+            objects: readonly.objects,
+            live_owned_object_markers: readonly.live_owned_object_markers,
+            transactions: readonly.transactions,
+            effects: readonly.effects,
+            executed_effects: readonly.executed_effects,
+            events: readonly.events,
+            events_2: readonly.events_2,
+            unchanged_loaded_runtime_objects: readonly.unchanged_loaded_runtime_objects,
+            executed_transactions_to_checkpoint: readonly.executed_transactions_to_checkpoint,
+            root_state_hash_by_epoch: readonly.root_state_hash_by_epoch,
+            epoch_start_configuration: readonly.epoch_start_configuration,
+            pruned_checkpoint: readonly.pruned_checkpoint,
+            expected_network_sui_amount: readonly.expected_network_sui_amount,
+            expected_storage_fund_imbalance: readonly.expected_storage_fund_imbalance,
+            object_per_epoch_marker_table: readonly.object_per_epoch_marker_table,
+            object_per_epoch_marker_table_v2: readonly.object_per_epoch_marker_table_v2,
+        }
+    }
+
+    /// Open tables in read-only mode, returning the same `AuthorityPerpetualTables` type.
+    /// Note: TideHunter does not support read-only mode.
+    #[cfg(tidehunter)]
+    pub fn open_as_readonly(parent_path: &Path) -> Self {
+        panic!("Read-only mode is not supported for TideHunter backend")
+    }
+
     // This is used by indexer to find the correct version of dynamic field child object.
     // We do not store the version of the child object, but because of lamport timestamp,
     // we know the child must have version number less then or eq to the parent.
