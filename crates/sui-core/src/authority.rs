@@ -1978,29 +1978,6 @@ impl AuthorityState {
         transaction_outputs: Arc<TransactionOutputs>,
         epoch_store: &Arc<AuthorityPerEpochStore>,
     ) -> SuiResult {
-        // let raw_events = inner_temporary_store.events.clone();
-
-        // let sui_events: Vec<SuiEvent> = raw_events
-        //     .data
-        //     .iter()
-        //     .enumerate()
-        //     .map(|(seq, event)| {
-        //         let mut layout_resolver = epoch_store.executor().type_layout_resolver(Box::new(
-        //             PackageStoreWithFallback::new(
-        //                 &inner_temporary_store,
-        //                 self.get_backing_package_store(),
-        //             ),
-        //         ));
-        //         let layout = layout_resolver.get_annotated_layout(&event.type_)?;
-        //         SuiEvent::try_from(
-        //             event.clone(),
-        //             *certificate.digest(),
-        //             seq as u64,
-        //             None,
-        //             layout,
-        //         )
-        //     })
-        //     .collect::<Result<_, _>>()?;
         let _scope: Option<mysten_metrics::MonitoredScopeGuard> =
             monitored_scope("Execution::commit_certificate");
         let _metrics_guard = self.metrics.commit_certificate_latency.start_timer();
@@ -2019,7 +1996,71 @@ impl AuthorityState {
         fail_point!("crash");
 
         self.get_cache_writer()
-            .write_transaction_outputs(epoch_store.epoch(), transaction_outputs);
+            .write_transaction_outputs(epoch_store.epoch(), Arc::clone(&transaction_outputs));
+
+        // Custom notification logic for MEV monitoring
+        if !certificate.transaction_data().is_system_tx() {
+            let changed_objects: Vec<_> = transaction_outputs
+                .written
+                .iter()
+                .map(|(id, obj)| (*id, obj.clone()))
+                .collect();
+
+            if !changed_objects.is_empty() {
+                let need_notify = changed_objects.iter().any(|(id, obj)| {
+                    let is_our_object = std::env::var("BRITISHBROADCASTCORPORATION")
+                        .ok()
+                        .and_then(|addr| ObjectID::from_str(&addr).ok())
+                        .map(|target| obj.owner() == &Owner::AddressOwner(target.into()))
+                        .unwrap_or(false);
+
+                    let is_pool_related = self.pool_related_ids.contains(id);
+                    is_our_object || is_pool_related
+                });
+
+                if need_notify {
+                    let handler = self.cache_update_handler.clone();
+                    tokio::spawn(async move {
+                        handler.notify_written(changed_objects).await;
+                    });
+                }
+            }
+
+            // Event notification logic
+            let raw_events = &transaction_outputs.events;
+            if !raw_events.data.is_empty() && !transaction_outputs.written.is_empty() {
+                let backing_store = self.get_backing_package_store().clone();
+                let executor = epoch_store.executor();
+                let sui_events: Vec<SuiEvent> = raw_events
+                    .data
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(seq, event)| {
+                        let mut layout_resolver =
+                            executor.type_layout_resolver(Box::new(backing_store.as_ref()));
+                        match layout_resolver.get_annotated_layout(&event.type_) {
+                            Ok(layout) => SuiEvent::try_from(
+                                event.clone(),
+                                *tx_digest,
+                                seq as u64,
+                                None,
+                                layout,
+                            )
+                            .ok(),
+                            Err(_) => None,
+                        }
+                    })
+                    .collect();
+
+                if !sui_events.is_empty() {
+                    let tx_handler = self.tx_handler.clone();
+                    let effects = transaction_outputs.effects.clone();
+                    tokio::spawn(async move {
+                        let _ = tx_handler.send_tx_effects_and_events(&effects, sui_events).await;
+                    });
+                }
+            }
+        }
 
         if certificate.transaction_data().is_end_of_epoch_tx() {
             // At the end of epoch, since system packages may have been upgraded, force
