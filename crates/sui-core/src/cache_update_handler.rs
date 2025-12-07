@@ -39,11 +39,13 @@ pub struct CacheUpdateHandler {
 
 impl CacheUpdateHandler {
     pub fn new() -> Self {
+        info!("CacheUpdateHandler::new() called, creating socket at {}", SOCKET_PATH);
         let socket_path = PathBuf::from(SOCKET_PATH);
         // Remove existing socket file if it exists
         let _ = std::fs::remove_file(&socket_path);
 
         let listener = UnixListener::bind(&socket_path).expect("Failed to bind Unix socket");
+        info!("CacheUpdateHandler: Unix socket bound successfully at {}", SOCKET_PATH);
 
         let connections = Arc::new(Mutex::new(Vec::new()));
         let running = Arc::new(AtomicBool::new(true));
