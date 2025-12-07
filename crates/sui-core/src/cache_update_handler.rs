@@ -30,22 +30,32 @@ pub fn pool_related_object_ids() -> DashSet<ObjectID> {
     set
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CacheUpdateHandler {
-    socket_path: PathBuf,
+    socket_path: Arc<PathBuf>,
     connections: Arc<Mutex<Vec<UnixStream>>>,
     running: Arc<AtomicBool>,
 }
 
+impl Clone for CacheUpdateHandler {
+    fn clone(&self) -> Self {
+        Self {
+            socket_path: Arc::clone(&self.socket_path),
+            connections: Arc::clone(&self.connections),
+            running: Arc::clone(&self.running),
+        }
+    }
+}
+
 impl CacheUpdateHandler {
     pub fn new() -> Self {
-        info!("CacheUpdateHandler::new() called, creating socket at {}", SOCKET_PATH);
-        let socket_path = PathBuf::from(SOCKET_PATH);
+        // info!("CacheUpdateHandler::new() called, creating socket at {}", SOCKET_PATH);
+        let socket_path = Arc::new(PathBuf::from(SOCKET_PATH));
         // Remove existing socket file if it exists
-        let _ = std::fs::remove_file(&socket_path);
+        let _ = std::fs::remove_file(socket_path.as_ref());
 
-        let listener = UnixListener::bind(&socket_path).expect("Failed to bind Unix socket");
-        info!("CacheUpdateHandler: Unix socket bound successfully at {}", SOCKET_PATH);
+        let listener = UnixListener::bind(socket_path.as_ref()).expect("Failed to bind Unix socket");
+        // info!("CacheUpdateHandler: Unix socket bound successfully at {}", SOCKET_PATH);
 
         let connections = Arc::new(Mutex::new(Vec::new()));
         let running = Arc::new(AtomicBool::new(true));
@@ -121,7 +131,11 @@ impl Default for CacheUpdateHandler {
 
 impl Drop for CacheUpdateHandler {
     fn drop(&mut self) {
-        self.running.store(false, Ordering::SeqCst);
-        let _ = std::fs::remove_file(&self.socket_path);
+        // Only clean up when this is the last reference
+        if Arc::strong_count(&self.socket_path) == 1 {
+            info!("CacheUpdateHandler::drop() called (last reference), removing socket at {:?}", self.socket_path);
+            self.running.store(false, Ordering::SeqCst);
+            let _ = std::fs::remove_file(self.socket_path.as_ref());
+        }
     }
 }
