@@ -20,7 +20,6 @@ import {
 	MultiSigPublicKey,
 	ObjectArg,
 	ObjectDigest,
-	PasskeyAuthenticator,
 	ProgrammableMoveCall,
 	ProgrammableTransaction,
 	PublicKey,
@@ -83,7 +82,6 @@ const suiBcs = {
 	TransactionKind,
 	TypeTag,
 	TransactionEffects,
-	PasskeyAuthenticator,
 };
 
 export { suiBcs as bcs };

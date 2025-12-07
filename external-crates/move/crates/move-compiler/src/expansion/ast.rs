@@ -101,6 +101,17 @@ pub type Attributes = UniqueMap<Spanned<KnownAttribute>, Attribute>;
 // Modules
 //**************************************************************************************************
 
+#[derive(Debug, Clone, Copy)]
+/// Specifies a source target or dependency
+pub enum TargetKind {
+    /// A source module. If is_root_package is false, some warnings might be suppressed.
+    /// Bytecode/CompiledModules will be generated for any Source target
+    Source { is_root_package: bool },
+    /// A dependency only used for linking.
+    /// No bytecode or CompiledModules are generated
+    External,
+}
+
 #[derive(Clone, Copy)]
 pub enum Address {
     Numerical {
@@ -125,7 +136,7 @@ pub struct ModuleDefinition {
     pub package_name: Option<Symbol>,
     pub attributes: Attributes,
     pub loc: Loc,
-    pub target_kind: P::TargetKind,
+    pub target_kind: TargetKind,
     pub use_funs: UseFuns,
     pub friends: UniqueMap<ModuleIdent, Friend>,
     pub structs: UniqueMap<DatatypeName, StructDefinition>,
@@ -1119,7 +1130,15 @@ impl AstDebug for ModuleDefinition {
             w.writeln(format!("{}", n))
         }
         attributes.ast_debug(w);
-        target_kind.ast_debug(w);
+        w.writeln(match target_kind {
+            TargetKind::Source {
+                is_root_package: true,
+            } => "root module",
+            TargetKind::Source {
+                is_root_package: false,
+            } => "dependency module",
+            TargetKind::External => "external module",
+        });
         use_funs.ast_debug(w);
         for (mident, _loc) in friends.key_cloned_iter() {
             w.write(format!("friend {};", mident));

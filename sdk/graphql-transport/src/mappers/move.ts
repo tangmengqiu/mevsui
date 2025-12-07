@@ -5,7 +5,6 @@ import type {
 	MoveStruct,
 	MoveValue,
 	SuiMoveAbility,
-	SuiMoveNormalizedEnum,
 	SuiMoveNormalizedFunction,
 	SuiMoveNormalizedModule,
 	SuiMoveNormalizedStruct,
@@ -14,7 +13,6 @@ import type {
 import { normalizeSuiAddress, parseStructTag } from '@mysten/sui/utils';
 
 import type {
-	Rpc_Move_Enum_FieldsFragment,
 	Rpc_Move_Function_FieldsFragment,
 	Rpc_Move_Module_FieldsFragment,
 	Rpc_Move_Struct_FieldsFragment,
@@ -158,7 +156,6 @@ export function mapNormalizedMoveModule(
 ): SuiMoveNormalizedModule {
 	const exposedFunctions: Record<string, SuiMoveNormalizedFunction> = {};
 	const structs: Record<string, SuiMoveNormalizedStruct> = {};
-	const enums: Record<string, SuiMoveNormalizedEnum> = {};
 
 	module.functions?.nodes
 		.filter((func) => func.visibility === 'PUBLIC' || func.isEntry || func.visibility === 'FRIEND')
@@ -168,10 +165,6 @@ export function mapNormalizedMoveModule(
 
 	module.structs?.nodes.forEach((struct) => {
 		structs[struct.name] = mapNormalizedMoveStruct(struct);
-	});
-
-	module.enums?.nodes.forEach((enumNode) => {
-		enums[enumNode.name] = mapNormalizedMoveEnum(enumNode);
 	});
 
 	return {
@@ -184,7 +177,6 @@ export function mapNormalizedMoveModule(
 				name: friend.name,
 			})) ?? [],
 		structs,
-		enums: module.enums ? enums : undefined,
 		exposedFunctions,
 	};
 }
@@ -302,37 +294,4 @@ export function moveDataToRpcContent(data: MoveData, layout: MoveTypeLayout): Mo
 	}
 
 	throw new Error('Invalid move data: ' + JSON.stringify(data));
-}
-
-export function mapNormalizedMoveEnum(
-	enumNode: Rpc_Move_Enum_FieldsFragment,
-): SuiMoveNormalizedEnum {
-	return {
-		abilities: {
-			abilities:
-				enumNode.abilities?.map(
-					(ability) => `${ability[0]}${ability.slice(1).toLowerCase()}` as SuiMoveAbility,
-				) ?? [],
-		},
-		typeParameters:
-			enumNode.typeParameters?.map((param) => ({
-				isPhantom: param.isPhantom!,
-				constraints: {
-					abilities:
-						param.constraints?.map(
-							(constraint) =>
-								`${constraint[0]}${constraint.slice(1).toLowerCase()}` as SuiMoveAbility,
-						) ?? [],
-				},
-			})) ?? [],
-		variants: Object.fromEntries(
-			enumNode.variants?.map((variant) => [
-				variant.name,
-				variant.fields?.map((field) => ({
-					name: field.name,
-					type: mapOpenMoveType(field.type?.signature),
-				})) ?? [],
-			]) ?? [],
-		),
-	};
 }

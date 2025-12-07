@@ -13,16 +13,14 @@ query ByTxSender {
       sendingModule {
         name
       }
-			contents {
-        type {
-          repr
-        }
-        json
+      type {
+        repr
       }
       sender {
         address
       }
       timestamp
+      json
       bcs
     }
   }

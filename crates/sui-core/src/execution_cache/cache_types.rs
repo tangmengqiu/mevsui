@@ -160,7 +160,6 @@ pub struct MonotonicCache<K, V> {
     key_generation: Vec<AtomicU64>,
 }
 
-#[derive(Copy, Clone)]
 pub enum Ticket {
     // Read tickets are used when caching the result of a read from the db.
     // They are only valid if the generation number matches the current generation.
@@ -179,7 +178,7 @@ const KEY_GENERATION_SIZE: usize = 1024 * 16;
 
 impl<K, V> MonotonicCache<K, V>
 where
-    K: Hash + Eq + Send + Sync + Copy + 'static,
+    K: Hash + Eq + Send + Sync + Copy + std::fmt::Debug + 'static,
     V: IsNewer + Clone + Send + Sync + 'static,
 {
     pub fn new(cache_size: u64) -> Self {
@@ -293,9 +292,10 @@ where
             let mut entry = entry.value().lock();
             check_ticket()?;
 
-            // Ticket expiry should make this assert impossible.
             if entry.is_newer_than(&value) {
-                debug_fatal!("entry is newer than value");
+                // TODO: Ticket expiry should this assert impossible. While trying to root cause
+                // the bug we can simply ignore the insert.
+                debug_fatal!("entry is newer than value for key {:?}", key);
             } else {
                 *entry = value;
             }

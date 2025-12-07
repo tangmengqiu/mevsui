@@ -7,9 +7,8 @@ use chrono::{naive::NaiveDateTime, DateTime, Utc};
 use diesel::{dsl::sql, prelude::*, sql_types};
 use diesel_async::RunQueryDsl;
 use sui_field_count::FieldCount;
-use sui_pg_db::Connection;
 
-use crate::schema::watermarks;
+use crate::{db::Connection, schema::watermarks};
 
 #[derive(Insertable, Selectable, Queryable, Debug, Clone, FieldCount)]
 #[diesel(table_name = watermarks)]
@@ -191,17 +190,16 @@ impl<'p> PrunerWatermark<'p> {
         (self.wait_for > 0).then(|| Duration::from_millis(self.wait_for as u64))
     }
 
-    /// The next chunk of checkpoints that the pruner should work on, to advance the watermark.
-    /// If no more checkpoints to prune, returns `None`.
-    /// Otherwise, returns a tuple (from, to_exclusive) where `from` is inclusive and `to_exclusive` is exclusive.
-    pub(crate) fn next_chunk(&mut self, size: u64) -> Option<(u64, u64)> {
-        if self.pruner_hi >= self.reader_lo {
-            return None;
-        }
+    /// Whether the pruner has any work left to do on the range in this watermark.
+    pub(crate) fn is_empty(&self) -> bool {
+        self.pruner_hi >= self.reader_lo
+    }
 
+    /// The next chunk that the pruner should work on, to advance the watermark.
+    pub(crate) fn next_chunk(&mut self, size: u64) -> (u64, u64) {
         let from = self.pruner_hi as u64;
-        let to_exclusive = (from + size).min(self.reader_lo as u64);
-        Some((from, to_exclusive))
+        let to = (from + size).min(self.reader_lo as u64);
+        (from, to)
     }
 
     /// Update the pruner high watermark (only) for an existing watermark row, as long as this

@@ -3370,6 +3370,7 @@ fn parse_body(context: &mut Context, native: Option<Loc>) -> Result<FunctionBody
                     ))),
                 )
             };
+
             let end_loc = context.tokens.previous_end_loc();
             Ok(sp(
                 make_loc(context.tokens.file_hash(), start_loc, end_loc),

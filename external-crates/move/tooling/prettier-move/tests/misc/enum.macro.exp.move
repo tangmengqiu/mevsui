@@ -70,7 +70,10 @@ module foo::bar {
             return 'a x;
             break 'a x;
             return 'a x.foo!();
-            break 'a { x = x + 1; x };
+            break 'a {
+                x = x + 1;
+                x
+            };
             continue 'a;
         };
         'a: loop {};
@@ -155,7 +158,9 @@ module foo::bar {
     }
 
     fun t() {
-        call!(|| -> u64 'a: { 0 });
+        call!(|| -> u64 'a: {
+            0
+        });
     }
 
     fun t() {

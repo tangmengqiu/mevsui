@@ -125,6 +125,7 @@ pub trait MoveTestAdapter<'a>: Sized + Send {
         path: &Path,
     ) -> (Self, Option<String>);
 
+    async fn cleanup_resources(&mut self) -> Result<()>;
     async fn publish_modules(
         &mut self,
         modules: Vec<MaybeNamedCompiledModule>,
@@ -703,9 +704,7 @@ pub fn compile_ir_module(
         .into_compiled_module(&code)
 }
 
-/// Creates an adapter for the given tasks, using the first task command to initialize the adapter
-/// if it is a `TaskCommand::Init`. Returns the adapter and the output string.
-pub async fn create_adapter<'a, Adapter>(
+pub async fn handle_actual_output<'a, Adapter>(
     path: &Path,
     fully_compiled_program_opt: Option<Arc<FullyCompiledProgram>>,
 ) -> Result<(String, Adapter), Box<dyn std::error::Error>>
@@ -757,62 +756,23 @@ where
             None
         }
     };
-
-    let (adapter, result_opt) =
+    let (mut adapter, result_opt) =
         Adapter::init(default_syntax, fully_compiled_program_opt, init_opt, path).await;
-
     if let Some(result) = result_opt {
         if let Err(e) = writeln!(output, "\ninit:\n{}", result) {
+            // TODO: if this fails, it masks the actual error, need better error handling
+            // in case cleanup_resources() fails
+            adapter.cleanup_resources().await?;
             return Err(Box::new(e));
         }
     }
-
-    Ok((output, adapter))
-}
-
-/// Consumes the adapter to run tasks from path.
-pub async fn run_tasks_with_adapter<'a, Adapter>(
-    path: &Path,
-    mut adapter: Adapter,
-    mut output: String,
-) -> Result<()>
-where
-    Adapter: MoveTestAdapter<'a>,
-    Adapter::ExtraInitArgs: Debug,
-    Adapter::ExtraPublishArgs: Debug,
-    Adapter::ExtraValueArgs: Debug,
-    Adapter::ExtraRunArgs: Debug,
-    Adapter::Subcommand: Debug,
-{
-    let mut tasks = taskify::<
-        TaskCommand<
-            Adapter::ExtraInitArgs,
-            Adapter::ExtraPublishArgs,
-            Adapter::ExtraValueArgs,
-            Adapter::ExtraRunArgs,
-            Adapter::Subcommand,
-        >,
-    >(path)?
-    .into_iter()
-    .collect::<VecDeque<_>>();
-    assert!(!tasks.is_empty());
-
-    // Pop off init command if present, this has already been handled before this function was
-    // called to initialize the adapter
-    if let Some(TaskCommand::Init(_, _)) = tasks.front().map(|t| &t.command) {
-        tasks.pop_front();
-    }
-
     for task in tasks {
         handle_known_task(&mut output, &mut adapter, task).await;
     }
-
-    handle_expected_output(path, output)?;
-    Ok(())
+    adapter.cleanup_resources().await?;
+    Ok((output, adapter))
 }
 
-/// Convenience function that creates an adapter and runs the tasks, to be used when a caller does
-/// not need to extend the adapter.
 pub async fn run_test_impl<'a, Adapter>(
     path: &Path,
     fully_compiled_program_opt: Option<Arc<FullyCompiledProgram>>,
@@ -825,8 +785,8 @@ where
     Adapter::ExtraRunArgs: Debug,
     Adapter::Subcommand: Debug,
 {
-    let (output, adapter) = create_adapter::<Adapter>(path, fully_compiled_program_opt).await?;
-    run_tasks_with_adapter(path, adapter, output).await?;
+    let output = handle_actual_output::<Adapter>(path, fully_compiled_program_opt).await?;
+    handle_expected_output(path, output.0)?;
     Ok(())
 }
 

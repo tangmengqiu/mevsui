@@ -8,7 +8,9 @@ use crate::{
     compiled_unit::*,
     diag,
     diagnostics::DiagnosticReporter,
-    expansion::ast::{AbilitySet, Address, Attributes, ModuleIdent, ModuleIdent_, Mutability},
+    expansion::ast::{
+        AbilitySet, Address, Attributes, ModuleIdent, ModuleIdent_, Mutability, TargetKind,
+    },
     hlir::ast::{self as H, Value_, Var, Visibility},
     naming::{
         ast::{BuiltinTypeName_, DatatypeTypeParameter, TParam},
@@ -16,7 +18,7 @@ use crate::{
     },
     parser::ast::{
         Ability, Ability_, BinOp, BinOp_, ConstantName, DatatypeName, Field, FunctionName,
-        ModuleName, TargetKind, UnaryOp, UnaryOp_, VariantName,
+        ModuleName, UnaryOp, UnaryOp_, VariantName,
     },
     shared::{unique_map::UniqueMap, *},
     FullyCompiledProgram,

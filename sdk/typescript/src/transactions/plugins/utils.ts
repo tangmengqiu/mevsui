@@ -94,11 +94,8 @@ export const replaceNames = (builder: TransactionDataBuilder, cache: NamedPackag
 		if (name.includes(NAME_SEPARATOR) && !cache.packages[name])
 			throw new Error(`No address found for package: ${name}`);
 
-		// Replace package name with address.
-		if (name.includes(NAME_SEPARATOR)) {
-			nameParts[0] = cache.packages[name];
-			tx.package = nameParts.join('::');
-		}
+		nameParts[0] = cache.packages[name];
+		tx.package = nameParts.join('::');
 
 		const types = tx.typeArguments;
 		if (!types) continue;

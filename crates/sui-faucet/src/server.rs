@@ -26,10 +26,7 @@ use std::{
 };
 use sui_config::SUI_CLIENT_CONFIG;
 use sui_sdk::wallet_context::WalletContext;
-use tower::ServiceBuilder;
-use tower_governor::{
-    governor::GovernorConfigBuilder, key_extractor::GlobalKeyExtractor, GovernorLayer,
-};
+use tower::{limit::RateLimitLayer, ServiceBuilder};
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{info, warn};
 use uuid::Uuid;
@@ -56,14 +53,6 @@ pub async fn start_faucet(
         ..
     } = app_state.config;
 
-    let governor_cfg = Arc::new(
-        GovernorConfigBuilder::default()
-            .burst_size(max_request_per_second as u32)
-            .key_extractor(GlobalKeyExtractor)
-            .finish()
-            .unwrap(),
-    );
-
     let app = Router::new()
         .route("/", get(health))
         .route("/gas", post(request_gas))
@@ -76,9 +65,10 @@ pub async fn start_faucet(
                 .layer(cors)
                 .load_shed()
                 .buffer(request_buffer_size)
-                .layer(GovernorLayer {
-                    config: governor_cfg,
-                })
+                .layer(RateLimitLayer::new(
+                    max_request_per_second,
+                    Duration::from_secs(1),
+                ))
                 .concurrency_limit(concurrency_limit)
                 .layer(Extension(app_state.clone()))
                 .into_inner(),

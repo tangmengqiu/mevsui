@@ -11,6 +11,7 @@ COPY Cargo.toml Cargo.lock ./
 COPY consensus consensus
 COPY crates crates
 COPY sui-execution sui-execution
+COPY narwhal narwhal
 COPY external-crates external-crates
 RUN cargo build --release \
     --bin sui-oracle \

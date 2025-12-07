@@ -225,18 +225,6 @@ diesel::table! {
     }
 }
 
-diesel::table! {
-    assets (asset_type) {
-        asset_type -> Text,
-        name -> Text,
-        symbol -> Text,
-        decimals -> Int2,
-        ucid -> Nullable<Int4>,
-        package_id -> Nullable<Text>,
-        package_address_url -> Nullable<Text>,
-    }
-}
-
 diesel::allow_tables_to_appear_in_same_query!(
     balances,
     flashloans,
@@ -251,7 +239,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     sui_error_transactions,
     trade_params_update,
     votes,
-    assets,
 );
 
 diesel::table! {

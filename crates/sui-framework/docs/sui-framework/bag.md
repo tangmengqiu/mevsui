@@ -38,7 +38,8 @@ empty to be destroyed.
 -  [Function `destroy_empty`](#0x2_bag_destroy_empty)
 
 
-<pre><code><b>use</b> <a href="../sui-framework/object.md#0x2_object">0x2::object</a>;
+<pre><code><b>use</b> <a href="../sui-framework/dynamic_field.md#0x2_dynamic_field">0x2::dynamic_field</a>;
+<b>use</b> <a href="../sui-framework/object.md#0x2_object">0x2::object</a>;
 <b>use</b> <a href="../sui-framework/tx_context.md#0x2_tx_context">0x2::tx_context</a>;
 </code></pre>
 
@@ -67,7 +68,7 @@ empty to be destroyed.
  the ID of this bag
 </dd>
 <dt>
-<code>size: u64</code>
+<code>size: <a href="../move-stdlib/u64.md#0x1_u64">u64</a></code>
 </dt>
 <dd>
  the number of key-value pairs in the bag
@@ -86,7 +87,7 @@ empty to be destroyed.
 
 
 
-<pre><code><b>const</b> <a href="../sui-framework/bag.md#0x2_bag_EBagNotEmpty">EBagNotEmpty</a>: u64 = 0;
+<pre><code><b>const</b> <a href="../sui-framework/bag.md#0x2_bag_EBagNotEmpty">EBagNotEmpty</a>: <a href="../move-stdlib/u64.md#0x1_u64">u64</a> = 0;
 </code></pre>
 
 
@@ -294,7 +295,7 @@ with an assigned value of type <code>V</code>
 Returns the size of the bag, the number of key-value pairs
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../sui-framework/bag.md#0x2_bag_length">length</a>(<a href="../sui-framework/bag.md#0x2_bag">bag</a>: &<a href="../sui-framework/bag.md#0x2_bag_Bag">bag::Bag</a>): u64
+<pre><code><b>public</b> <b>fun</b> <a href="../sui-framework/bag.md#0x2_bag_length">length</a>(<a href="../sui-framework/bag.md#0x2_bag">bag</a>: &<a href="../sui-framework/bag.md#0x2_bag_Bag">bag::Bag</a>): <a href="../move-stdlib/u64.md#0x1_u64">u64</a>
 </code></pre>
 
 
@@ -303,7 +304,7 @@ Returns the size of the bag, the number of key-value pairs
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../sui-framework/bag.md#0x2_bag_length">length</a>(<a href="../sui-framework/bag.md#0x2_bag">bag</a>: &<a href="../sui-framework/bag.md#0x2_bag_Bag">Bag</a>): u64 {
+<pre><code><b>public</b> <b>fun</b> <a href="../sui-framework/bag.md#0x2_bag_length">length</a>(<a href="../sui-framework/bag.md#0x2_bag">bag</a>: &<a href="../sui-framework/bag.md#0x2_bag_Bag">Bag</a>): <a href="../move-stdlib/u64.md#0x1_u64">u64</a> {
     <a href="../sui-framework/bag.md#0x2_bag">bag</a>.size
 }
 </code></pre>

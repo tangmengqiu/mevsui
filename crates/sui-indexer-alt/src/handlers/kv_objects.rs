@@ -5,10 +5,13 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use diesel_async::RunQueryDsl;
-use sui_indexer_alt_framework::pipeline::{concurrent::Handler, Processor};
-use sui_indexer_alt_schema::{objects::StoredObject, schema::kv_objects};
-use sui_pg_db as db;
+use sui_indexer_alt_framework::{
+    db,
+    pipeline::{concurrent::Handler, Processor},
+};
 use sui_types::full_checkpoint_content::CheckpointData;
+
+use crate::{models::objects::StoredObject, schema::kv_objects};
 
 pub(crate) struct KvObjects;
 

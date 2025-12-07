@@ -63,17 +63,14 @@ function printMacroArgsList(path: AstPath<Node>, options: MoveOptions, print: pr
 
 	const groupId = Symbol('macro_args_list');
 
-	return group(
-		list({
-			path,
-			options,
-			print,
-			open: '(',
-			close: ')',
-			addWhitespace: false,
-			shouldBreak: false,
-			indentGroup: groupId,
-		}),
-		{ id: groupId },
-	);
+	return group(list({
+		path,
+		options,
+		print,
+		open: '(',
+		close: ')',
+		addWhitespace: false,
+		shouldBreak: false,
+		indentGroup: groupId,
+	}), { id: groupId });
 }

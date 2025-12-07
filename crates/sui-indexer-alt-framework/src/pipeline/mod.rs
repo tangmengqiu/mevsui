@@ -9,9 +9,12 @@ pub use processor::Processor;
 use serde::{Deserialize, Serialize};
 
 pub mod concurrent;
-mod logging;
 mod processor;
 pub mod sequential;
+
+/// Tracing message for the watermark update will be logged at info level at least this many
+/// checkpoints.
+const LOUD_WATERMARK_UPDATE_INTERVAL: i64 = 5 * 10;
 
 /// Extra buffer added to channels between tasks in a pipeline. There does not need to be a huge
 /// capacity here because tasks already buffer rows to insert internally.
@@ -40,7 +43,7 @@ pub struct CommitterConfig {
 
 /// Processed values associated with a single checkpoint. This is an internal type used to
 /// communicate between the processor and the collector parts of the pipeline.
-struct IndexedCheckpoint<P: Processor> {
+struct Indexed<P: Processor> {
     /// Values to be inserted into the database from this checkpoint
     values: Vec<P::Value>,
     /// The watermark associated with this checkpoint
@@ -79,7 +82,7 @@ impl CommitterConfig {
     }
 }
 
-impl<P: Processor> IndexedCheckpoint<P> {
+impl<P: Processor> Indexed<P> {
     fn new(
         epoch: u64,
         cp_sequence_number: u64,
@@ -113,10 +116,6 @@ impl<P: Processor> IndexedCheckpoint<P> {
 impl WatermarkPart {
     fn checkpoint(&self) -> u64 {
         self.watermark.checkpoint_hi_inclusive as u64
-    }
-
-    fn timestamp_ms(&self) -> u64 {
-        self.watermark.timestamp_ms_hi_inclusive as u64
     }
 
     /// Check if all the rows from this watermark are represented in this part.

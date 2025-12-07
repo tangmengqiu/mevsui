@@ -9,10 +9,10 @@ use crate::types::GetCheckpointOptions;
 use crate::types::GetFullCheckpointOptions;
 use crate::Result;
 use crate::RpcService;
-use sui_sdk_types::CheckpointContents;
-use sui_sdk_types::CheckpointDigest;
-use sui_sdk_types::CheckpointSequenceNumber;
-use sui_sdk_types::SignedCheckpointSummary;
+use sui_sdk_types::types::CheckpointContents;
+use sui_sdk_types::types::CheckpointDigest;
+use sui_sdk_types::types::CheckpointSequenceNumber;
+use sui_sdk_types::types::SignedCheckpointSummary;
 use tap::Pipe;
 
 impl RpcService {
@@ -269,12 +269,24 @@ fn object_to_object_response(
     .pipe(Ok)
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, schemars::JsonSchema)]
+#[schemars(untagged)]
 pub enum CheckpointId {
+    #[schemars(
+        title = "SequenceNumber",
+        example = "CheckpointSequenceNumber::default"
+    )]
     /// Sequence number or height of a Checkpoint
-    SequenceNumber(CheckpointSequenceNumber),
+    SequenceNumber(#[schemars(with = "crate::rest::_schemars::U64")] CheckpointSequenceNumber),
+    #[schemars(title = "Digest", example = "example_digest")]
     /// Base58 encoded 32-byte digest of a Checkpoint
     Digest(CheckpointDigest),
+}
+
+fn example_digest() -> CheckpointDigest {
+    "4btiuiMPvEENsttpZC7CZ53DruC3MAgfznDbASZ7DR6S"
+        .parse()
+        .unwrap()
 }
 
 impl<'de> serde::Deserialize<'de> for CheckpointId {

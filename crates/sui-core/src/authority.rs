@@ -64,7 +64,7 @@ use sui_types::messages_consensus::{AuthorityCapabilitiesV1, AuthorityCapabiliti
 use sui_types::object::bounded_visitor::BoundedVisitor;
 
 use sui_types::transaction_executor::SimulateTransactionResult;
-use tap::TapFallible;
+use tap::{TapFallible, TapOptional};
 use tokio::sync::mpsc::unbounded_channel;
 use tokio::sync::{mpsc, oneshot, RwLock};
 use tokio::task::JoinHandle;
@@ -78,6 +78,7 @@ use mysten_metrics::{monitored_scope, spawn_monitored_task};
 use crate::jsonrpc_index::IndexStore;
 use crate::jsonrpc_index::{CoinInfo, ObjectIndexChanges};
 use mysten_common::debug_fatal;
+use once_cell::sync::OnceCell;
 use shared_crypto::intent::{AppId, Intent, IntentMessage, IntentScope, IntentVersion};
 use sui_archival::reader::ArchiveReaderBalancer;
 use sui_config::genesis::Genesis;
@@ -221,7 +222,8 @@ pub mod test_authority_builder;
 pub mod transaction_deferral;
 
 pub(crate) mod authority_store;
-pub mod backpressure;
+
+pub static CHAIN_IDENTIFIER: OnceCell<ChainIdentifier> = OnceCell::new();
 
 const ABEX_SWAP_EVENT: &str =
     "0xceab84acf6bf70f503c3b0627acaff6b3f84cee0f2d7ed53d00fa6c2a168d14f::market::Swapped";
@@ -869,9 +871,6 @@ pub struct AuthorityState {
 
     pub validator_tx_finalizer: Option<Arc<ValidatorTxFinalizer<NetworkAuthorityClient>>>,
 
-    /// The chain identifier is derived from the digest of the genesis checkpoint.
-    chain_identifier: ChainIdentifier,
-
     pub cache_update_handler: CacheUpdateHandler,
 
     pub tx_handler: TxHandler,
@@ -1154,16 +1153,6 @@ impl AuthorityState {
             .tap_err(|_| {
                 self.update_overload_metrics("consensus");
             })?;
-
-        let pending_tx_count = self
-            .get_cache_commit()
-            .approximate_pending_transaction_count();
-        if pending_tx_count > self.config.execution_cache.backpressure_threshold_for_rpc() {
-            return Err(SuiError::ValidatorOverloadedRetryAfter {
-                retry_after_secs: 10,
-            });
-        }
-
         Ok(())
     }
 
@@ -3211,7 +3200,6 @@ impl AuthorityState {
         indirect_objects_threshold: usize,
         archive_readers: ArchiveReaderBalancer,
         validator_tx_finalizer: Option<Arc<ValidatorTxFinalizer<NetworkAuthorityClient>>>,
-        chain_identifier: ChainIdentifier,
     ) -> Arc<Self> {
         Self::check_protocol_version(supported_protocol_versions, epoch_store.protocol_version());
 
@@ -3268,7 +3256,6 @@ impl AuthorityState {
             config,
             overload_info: AuthorityOverloadInfo::default(),
             validator_tx_finalizer,
-            chain_identifier,
             cache_update_handler: CacheUpdateHandler::new(),
             tx_handler: TxHandler::default(),
             pool_related_ids: pool_related_object_ids(),
@@ -3832,8 +3819,19 @@ impl AuthorityState {
     }
 
     /// Chain Identifier is the digest of the genesis checkpoint.
-    pub fn get_chain_identifier(&self) -> ChainIdentifier {
-        self.chain_identifier
+    pub fn get_chain_identifier(&self) -> Option<ChainIdentifier> {
+        if let Some(digest) = CHAIN_IDENTIFIER.get() {
+            return Some(*digest);
+        }
+
+        let checkpoint = self
+            .get_checkpoint_by_sequence_number(0)
+            .tap_err(|e| error!("Failed to get genesis checkpoint: {:?}", e))
+            .ok()?
+            .tap_none(|| error!("Genesis checkpoint is missing from DB"))?;
+        // It's ok if the value is already set due to data races.
+        let _ = CHAIN_IDENTIFIER.set(ChainIdentifier::from(*checkpoint.digest()));
+        Some(ChainIdentifier::from(*checkpoint.digest()))
     }
 
     #[instrument(level = "trace", skip_all)]
@@ -4465,19 +4463,16 @@ impl AuthorityState {
         }
 
         // get the unique set of digests from the event_keys
-        let transaction_digests = event_keys
+        let event_digests = event_keys
             .iter()
-            .map(|(_, digest, _, _)| *digest)
+            .map(|(digest, _, _, _)| *digest)
             .collect::<HashSet<_>>()
             .into_iter()
             .collect::<Vec<_>>();
 
-        let events = kv_store
-            .multi_get_events_by_tx_digests(&transaction_digests)
-            .await?;
+        let events = kv_store.multi_get_events(&event_digests).await?;
 
-        let events_map: HashMap<_, _> =
-            transaction_digests.iter().zip(events.into_iter()).collect();
+        let events_map: HashMap<_, _> = event_digests.iter().zip(events.into_iter()).collect();
 
         let stored_events = event_keys
             .into_iter()
@@ -4485,7 +4480,7 @@ impl AuthorityState {
                 (
                     k,
                     events_map
-                        .get(&k.1)
+                        .get(&k.0)
                         .expect("fetched digest is missing")
                         .clone()
                         .and_then(|e| e.data.get(k.2).cloned()),
@@ -5663,7 +5658,12 @@ impl TransactionKeyValueStoreTrait for AuthorityState {
         &self,
         transactions: &[TransactionDigest],
         effects: &[TransactionDigest],
-    ) -> SuiResult<(Vec<Option<Transaction>>, Vec<Option<TransactionEffects>>)> {
+        events: &[TransactionEventsDigest],
+    ) -> SuiResult<(
+        Vec<Option<Transaction>>,
+        Vec<Option<TransactionEffects>>,
+        Vec<Option<TransactionEvents>>,
+    )> {
         let txns = if !transactions.is_empty() {
             self.get_transaction_cache_reader()
                 .multi_get_transaction_blocks(transactions)
@@ -5681,7 +5681,13 @@ impl TransactionKeyValueStoreTrait for AuthorityState {
             vec![]
         };
 
-        Ok((txns, fx))
+        let evts = if !events.is_empty() {
+            self.get_transaction_cache_reader().multi_get_events(events)
+        } else {
+            vec![]
+        };
+
+        Ok((txns, fx, evts))
     }
 
     #[instrument(skip(self))]

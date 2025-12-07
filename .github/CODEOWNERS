@@ -18,10 +18,14 @@ CHANGELOG.md
 /crates/sui-graphql-rpc/ @oxade @amnn @wlmyng @stefan-mysten @emmazzz @suiwombat
 /crates/sui-graphql-e2e-tests/ @oxade @amnn @wlmyng @stefan-mysten @emmazzz @suiwombat
 
-# Consensus working group
-/consensus/ @MystenLabs/consensus
-/crates/sui-core/src/consensus_handler.rs @MystenLabs/consensus
-/crates/sui-core/src/consensus_adapter.rs @MystenLabs/consensus
+
+# Notify Narwhal changes to interested folks.
+/narwhal/crypto/ @joyqvq @kchalkias
+/narwhal/executor/ @asonnino @akichidis @laura-makdah
+/narwhal/network/ @bmwill
+/narwhal/storage/ @akichidis
+
+/crates/sui-core/src/consensus_adapter.rs @laura-makdah
 
 apps/ @MystenLabs/fe-and-apps
 sdk/ @MystenLabs/sdk-reviewers

@@ -31,6 +31,7 @@ strings.
 
 <pre><code><b>use</b> <a href="../move-stdlib/ascii.md#0x1_ascii">0x1::ascii</a>;
 <b>use</b> <a href="../move-stdlib/option.md#0x1_option">0x1::option</a>;
+<b>use</b> <a href="../move-stdlib/vector.md#0x1_vector">0x1::vector</a>;
 </code></pre>
 
 
@@ -74,7 +75,7 @@ format.
 Index out of range.
 
 
-<pre><code><b>const</b> <a href="../move-stdlib/string.md#0x1_string_EInvalidIndex">EInvalidIndex</a>: u64 = 2;
+<pre><code><b>const</b> <a href="../move-stdlib/string.md#0x1_string_EInvalidIndex">EInvalidIndex</a>: <a href="../move-stdlib/u64.md#0x1_u64">u64</a> = 2;
 </code></pre>
 
 
@@ -84,7 +85,7 @@ Index out of range.
 An invalid UTF8 encoding.
 
 
-<pre><code><b>const</b> <a href="../move-stdlib/string.md#0x1_string_EInvalidUTF8">EInvalidUTF8</a>: u64 = 1;
+<pre><code><b>const</b> <a href="../move-stdlib/string.md#0x1_string_EInvalidUTF8">EInvalidUTF8</a>: <a href="../move-stdlib/u64.md#0x1_u64">u64</a> = 1;
 </code></pre>
 
 
@@ -277,7 +278,7 @@ Checks whether this string is empty.
 Returns the length of this string, in bytes.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_length">length</a>(s: &<a href="../move-stdlib/string.md#0x1_string_String">string::String</a>): u64
+<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_length">length</a>(s: &<a href="../move-stdlib/string.md#0x1_string_String">string::String</a>): <a href="../move-stdlib/u64.md#0x1_u64">u64</a>
 </code></pre>
 
 
@@ -286,7 +287,7 @@ Returns the length of this string, in bytes.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_length">length</a>(s: &<a href="../move-stdlib/string.md#0x1_string_String">String</a>): u64 {
+<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_length">length</a>(s: &<a href="../move-stdlib/string.md#0x1_string_String">String</a>): <a href="../move-stdlib/u64.md#0x1_u64">u64</a> {
     s.bytes.<a href="../move-stdlib/string.md#0x1_string_length">length</a>()
 }
 </code></pre>
@@ -353,7 +354,7 @@ Insert the other string at the byte index in given string. The index
 must be at a valid utf8 char boundary.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_insert">insert</a>(s: &<b>mut</b> <a href="../move-stdlib/string.md#0x1_string_String">string::String</a>, at: u64, o: <a href="../move-stdlib/string.md#0x1_string_String">string::String</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_insert">insert</a>(s: &<b>mut</b> <a href="../move-stdlib/string.md#0x1_string_String">string::String</a>, at: <a href="../move-stdlib/u64.md#0x1_u64">u64</a>, o: <a href="../move-stdlib/string.md#0x1_string_String">string::String</a>)
 </code></pre>
 
 
@@ -362,7 +363,7 @@ must be at a valid utf8 char boundary.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_insert">insert</a>(s: &<b>mut</b> <a href="../move-stdlib/string.md#0x1_string_String">String</a>, at: u64, o: <a href="../move-stdlib/string.md#0x1_string_String">String</a>) {
+<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_insert">insert</a>(s: &<b>mut</b> <a href="../move-stdlib/string.md#0x1_string_String">String</a>, at: <a href="../move-stdlib/u64.md#0x1_u64">u64</a>, o: <a href="../move-stdlib/string.md#0x1_string_String">String</a>) {
     <b>let</b> bytes = &s.bytes;
     <b>assert</b>!(at &lt;= bytes.<a href="../move-stdlib/string.md#0x1_string_length">length</a>() && <a href="../move-stdlib/string.md#0x1_string_internal_is_char_boundary">internal_is_char_boundary</a>(bytes, at), <a href="../move-stdlib/string.md#0x1_string_EInvalidIndex">EInvalidIndex</a>);
     <b>let</b> l = s.<a href="../move-stdlib/string.md#0x1_string_length">length</a>();
@@ -388,7 +389,7 @@ length of the string). The indices must be at valid utf8 char boundaries,
 guaranteeing that the result is valid utf8.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_substring">substring</a>(s: &<a href="../move-stdlib/string.md#0x1_string_String">string::String</a>, i: u64, j: u64): <a href="../move-stdlib/string.md#0x1_string_String">string::String</a>
+<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_substring">substring</a>(s: &<a href="../move-stdlib/string.md#0x1_string_String">string::String</a>, i: <a href="../move-stdlib/u64.md#0x1_u64">u64</a>, j: <a href="../move-stdlib/u64.md#0x1_u64">u64</a>): <a href="../move-stdlib/string.md#0x1_string_String">string::String</a>
 </code></pre>
 
 
@@ -397,7 +398,7 @@ guaranteeing that the result is valid utf8.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_substring">substring</a>(s: &<a href="../move-stdlib/string.md#0x1_string_String">String</a>, i: u64, j: u64): <a href="../move-stdlib/string.md#0x1_string_String">String</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_substring">substring</a>(s: &<a href="../move-stdlib/string.md#0x1_string_String">String</a>, i: <a href="../move-stdlib/u64.md#0x1_u64">u64</a>, j: <a href="../move-stdlib/u64.md#0x1_u64">u64</a>): <a href="../move-stdlib/string.md#0x1_string_String">String</a> {
     <b>let</b> bytes = &s.bytes;
     <b>let</b> l = bytes.<a href="../move-stdlib/string.md#0x1_string_length">length</a>();
     <b>assert</b>!(
@@ -423,7 +424,7 @@ Computes the index of the first occurrence of a string. Returns <code>s.<a href=
 if no occurrence found.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_index_of">index_of</a>(s: &<a href="../move-stdlib/string.md#0x1_string_String">string::String</a>, r: &<a href="../move-stdlib/string.md#0x1_string_String">string::String</a>): u64
+<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_index_of">index_of</a>(s: &<a href="../move-stdlib/string.md#0x1_string_String">string::String</a>, r: &<a href="../move-stdlib/string.md#0x1_string_String">string::String</a>): <a href="../move-stdlib/u64.md#0x1_u64">u64</a>
 </code></pre>
 
 
@@ -432,7 +433,7 @@ if no occurrence found.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_index_of">index_of</a>(s: &<a href="../move-stdlib/string.md#0x1_string_String">String</a>, r: &<a href="../move-stdlib/string.md#0x1_string_String">String</a>): u64 {
+<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_index_of">index_of</a>(s: &<a href="../move-stdlib/string.md#0x1_string_String">String</a>, r: &<a href="../move-stdlib/string.md#0x1_string_String">String</a>): <a href="../move-stdlib/u64.md#0x1_u64">u64</a> {
     <a href="../move-stdlib/string.md#0x1_string_internal_index_of">internal_index_of</a>(&s.bytes, &r.bytes)
 }
 </code></pre>
@@ -469,7 +470,7 @@ if no occurrence found.
 
 
 
-<pre><code><b>fun</b> <a href="../move-stdlib/string.md#0x1_string_internal_is_char_boundary">internal_is_char_boundary</a>(v: &<a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;, i: u64): bool
+<pre><code><b>fun</b> <a href="../move-stdlib/string.md#0x1_string_internal_is_char_boundary">internal_is_char_boundary</a>(v: &<a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;, i: <a href="../move-stdlib/u64.md#0x1_u64">u64</a>): bool
 </code></pre>
 
 
@@ -478,7 +479,7 @@ if no occurrence found.
 <summary>Implementation</summary>
 
 
-<pre><code><b>native</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_internal_is_char_boundary">internal_is_char_boundary</a>(v: &<a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;, i: u64): bool;
+<pre><code><b>native</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_internal_is_char_boundary">internal_is_char_boundary</a>(v: &<a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;, i: <a href="../move-stdlib/u64.md#0x1_u64">u64</a>): bool;
 </code></pre>
 
 
@@ -491,7 +492,7 @@ if no occurrence found.
 
 
 
-<pre><code><b>fun</b> <a href="../move-stdlib/string.md#0x1_string_internal_sub_string">internal_sub_string</a>(v: &<a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;, i: u64, j: u64): <a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;
+<pre><code><b>fun</b> <a href="../move-stdlib/string.md#0x1_string_internal_sub_string">internal_sub_string</a>(v: &<a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;, i: <a href="../move-stdlib/u64.md#0x1_u64">u64</a>, j: <a href="../move-stdlib/u64.md#0x1_u64">u64</a>): <a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;
 </code></pre>
 
 
@@ -500,7 +501,7 @@ if no occurrence found.
 <summary>Implementation</summary>
 
 
-<pre><code><b>native</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_internal_sub_string">internal_sub_string</a>(v: &<a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;, i: u64, j: u64): <a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;;
+<pre><code><b>native</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_internal_sub_string">internal_sub_string</a>(v: &<a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;, i: <a href="../move-stdlib/u64.md#0x1_u64">u64</a>, j: <a href="../move-stdlib/u64.md#0x1_u64">u64</a>): <a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;;
 </code></pre>
 
 
@@ -513,7 +514,7 @@ if no occurrence found.
 
 
 
-<pre><code><b>fun</b> <a href="../move-stdlib/string.md#0x1_string_internal_index_of">internal_index_of</a>(v: &<a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;, r: &<a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;): u64
+<pre><code><b>fun</b> <a href="../move-stdlib/string.md#0x1_string_internal_index_of">internal_index_of</a>(v: &<a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;, r: &<a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;): <a href="../move-stdlib/u64.md#0x1_u64">u64</a>
 </code></pre>
 
 
@@ -522,7 +523,7 @@ if no occurrence found.
 <summary>Implementation</summary>
 
 
-<pre><code><b>native</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_internal_index_of">internal_index_of</a>(v: &<a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;, r: &<a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;): u64;
+<pre><code><b>native</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_internal_index_of">internal_index_of</a>(v: &<a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;, r: &<a href="../move-stdlib/vector.md#0x1_vector">vector</a>&lt;u8&gt;): <a href="../move-stdlib/u64.md#0x1_u64">u64</a>;
 </code></pre>
 
 
@@ -557,7 +558,7 @@ if no occurrence found.
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_sub_string">sub_string</a>(s: &<a href="../move-stdlib/string.md#0x1_string_String">string::String</a>, i: u64, j: u64): <a href="../move-stdlib/string.md#0x1_string_String">string::String</a>
+<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_sub_string">sub_string</a>(s: &<a href="../move-stdlib/string.md#0x1_string_String">string::String</a>, i: <a href="../move-stdlib/u64.md#0x1_u64">u64</a>, j: <a href="../move-stdlib/u64.md#0x1_u64">u64</a>): <a href="../move-stdlib/string.md#0x1_string_String">string::String</a>
 </code></pre>
 
 
@@ -566,7 +567,7 @@ if no occurrence found.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_sub_string">sub_string</a>(s: &<a href="../move-stdlib/string.md#0x1_string_String">String</a>, i: u64, j: u64): <a href="../move-stdlib/string.md#0x1_string_String">String</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="../move-stdlib/string.md#0x1_string_sub_string">sub_string</a>(s: &<a href="../move-stdlib/string.md#0x1_string_String">String</a>, i: <a href="../move-stdlib/u64.md#0x1_u64">u64</a>, j: <a href="../move-stdlib/u64.md#0x1_u64">u64</a>): <a href="../move-stdlib/string.md#0x1_string_String">String</a> {
     s.<a href="../move-stdlib/string.md#0x1_string_substring">substring</a>(i, j)
 }
 </code></pre>

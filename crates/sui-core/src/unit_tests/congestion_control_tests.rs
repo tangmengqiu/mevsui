@@ -302,7 +302,6 @@ async fn test_congestion_control_execution_cancellation() {
             Some(1000), // Not used.
             None,       // Not used.
             0,          // Disable overage.
-            0,
         ))
     });
 

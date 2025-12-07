@@ -46,7 +46,6 @@ const standards = [
 					'standards/deepbookv3/staking-governance',
 				],
 			},
-			'standards/deepbookv3-indexer',
 			{
 				type: 'category',
 				label: 'DeepBookV3 SDK',

@@ -1,11 +1,10 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import { ampli } from '_src/shared/analytics/ampli';
 import { type PermissionType } from '_src/shared/messaging/messages/payloads/permissions';
 import { Transaction } from '@mysten/sui/transactions';
 import cn from 'clsx';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 
@@ -54,18 +53,14 @@ export function UserApproveContainer({
 	checkAccountLock,
 }: UserApproveContainerProps) {
 	const [submitting, setSubmitting] = useState(false);
-	const [scamOverlayDismissed, setScamOverlayDismissed] = useState(false);
-
-	const handleDismissScamOverlay = () => {
-		ampli.bypassedScamWarning({ hostname: new URL(origin).hostname });
-		setScamOverlayDismissed(true);
-	};
-
-	const handleOnResponse = async (allowed: boolean) => {
-		setSubmitting(true);
-		await onSubmit(allowed);
-		setSubmitting(false);
-	};
+	const handleOnResponse = useCallback(
+		async (allowed: boolean) => {
+			setSubmitting(true);
+			await onSubmit(allowed);
+			setSubmitting(false);
+		},
+		[onSubmit],
+	);
 
 	const { data: selectedAccount } = useAccountByAddress(address);
 	const parsedOrigin = useMemo(() => new URL(origin), [origin]);
@@ -87,7 +82,8 @@ export function UserApproveContainer({
 	const message = request && request.tx && 'message' in request.tx ? request.tx.message : undefined;
 
 	const {
-		data: preflight,
+		data,
+		isOpen,
 		isPending: isDomainCheckLoading,
 		isError,
 	} = useShowScamWarning({
@@ -103,13 +99,12 @@ export function UserApproveContainer({
 
 	return (
 		<>
-			{!scamOverlayDismissed && !!preflight && (
-				<ScamOverlay
-					preflight={preflight}
-					onClickBack={() => handleOnResponse(false)}
-					onClickContinue={handleDismissScamOverlay}
-				/>
-			)}
+			<ScamOverlay
+				open={isOpen}
+				title={data?.block.title}
+				subtitle={data?.block.subtitle}
+				onDismiss={() => handleOnResponse(false)}
+			/>
 			<div className="flex flex-1 flex-col flex-nowrap h-full">
 				<div className="flex-1 pb-0 flex flex-col">
 					<DAppInfoCard

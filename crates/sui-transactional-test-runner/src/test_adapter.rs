@@ -3,7 +3,6 @@
 
 //! This module contains the transactional test runner instantiation for the Sui adapter
 
-use crate::offchain_state::OffchainStateReader;
 use crate::simulator_persisted_store::PersistedStore;
 use crate::{args::*, programmable_transaction_test_parser::parser::ParsedCommand};
 use crate::{TransactionalAdapter, ValidatorWithFullnode};
@@ -40,7 +39,6 @@ use move_vm_runtime::session::SerializedReturnValues;
 use once_cell::sync::Lazy;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::fmt::{self, Write};
-use std::path::PathBuf;
 use std::time::Duration;
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -50,7 +48,8 @@ use std::{
 use sui_core::authority::test_authority_builder::TestAuthorityBuilder;
 use sui_core::authority::AuthorityState;
 use sui_framework::DEFAULT_FRAMEWORK_PATH;
-use sui_graphql_rpc::test_infra::cluster::{RetentionConfig, SnapshotLagConfig};
+use sui_graphql_rpc::test_infra::cluster::ExecutorCluster;
+use sui_graphql_rpc::test_infra::cluster::{serve_executor, RetentionConfig, SnapshotLagConfig};
 use sui_json_rpc_api::QUERY_MAX_RESULT_LIMIT;
 use sui_json_rpc_types::{DevInspectResults, SuiExecutionStatus, SuiTransactionBlockEffectsAPI};
 use sui_protocol_config::{Chain, ProtocolConfig};
@@ -67,8 +66,8 @@ use sui_types::messages_checkpoint::{
     CheckpointContents, CheckpointContentsDigest, CheckpointSequenceNumber, VerifiedCheckpoint,
 };
 use sui_types::object::bounded_visitor::BoundedVisitor;
+use sui_types::storage::ObjectStore;
 use sui_types::storage::ReadStore;
-use sui_types::storage::{ObjectStore, RpcStateReader};
 use sui_types::transaction::Command;
 use sui_types::transaction::ProgrammableTransaction;
 use sui_types::utils::to_sender_signed_transaction_with_multi_signers;
@@ -125,19 +124,6 @@ const GAS_FOR_TESTING: u64 = GAS_VALUE_FOR_TESTING;
 
 const DEFAULT_CHAIN_START_TIMESTAMP: u64 = 0;
 
-/// Extra args related to configuring the indexer and reader.
-// TODO: the configs are still tied to the indexer crate, eventually we'd like a new command that is
-// more agnostic
-pub struct OffChainConfig {
-    pub snapshot_config: SnapshotLagConfig,
-    pub retention_config: Option<RetentionConfig>,
-    /// Dir for simulacrum to write checkpoint files to. To be passed to the offchain indexer if it
-    /// uses file-based ingestion.
-    pub data_ingestion_path: PathBuf,
-    /// URL for the Sui REST API. To be passed to the offchain indexer if it uses the REST API.
-    pub rest_api_url: Option<String>,
-}
-
 pub struct SuiTestAdapter {
     pub(crate) compiled_state: CompiledState,
     /// For upgrades: maps an upgraded package name to the original package name.
@@ -150,30 +136,8 @@ pub struct SuiTestAdapter {
     gas_price: u64,
     pub(crate) staged_modules: BTreeMap<Symbol, StagedPackage>,
     is_simulator: bool,
+    pub(crate) cluster: Option<ExecutorCluster>,
     pub(crate) executor: Box<dyn TransactionalAdapter>,
-    /// If `is_simulator` is true, the executor will be a `Simulacrum`, and this will be a
-    /// `RpcStateReader` that can be used to spawn the equivalent of a fullnode rest api. This can
-    /// then be used to serve an indexer that reads from said rest api service.
-    pub read_replica: Option<Arc<dyn RpcStateReader + Send + Sync>>,
-    /// Configuration for offchain state reader read from the file itself, and can be passed to the
-    /// specific indexing and reader flavor.
-    pub offchain_config: Option<OffChainConfig>,
-    /// A trait encapsulating methods to interact with offchain state.
-    pub offchain_reader: Option<Box<dyn OffchainStateReader>>,
-}
-
-struct AdapterInitConfig {
-    additional_mapping: BTreeMap<String, NumericalAddress>,
-    account_names: BTreeSet<String>,
-    protocol_config: ProtocolConfig,
-    is_simulator: bool,
-    custom_validator_account: bool,
-    reference_gas_price: Option<u64>,
-    default_gas_price: Option<u64>,
-    flavor: Option<Flavor>,
-    /// Configuration for offchain state reader read from the file itself, and can be passed to the
-    /// specific indexing and reader flavor.
-    offchain_config: Option<OffChainConfig>,
 }
 
 pub(crate) struct StagedPackage {
@@ -201,79 +165,6 @@ struct TxnSummary {
     unchanged_shared: Vec<ObjectID>,
     events: Vec<Event>,
     gas_summary: GasCostSummary,
-}
-
-impl AdapterInitConfig {
-    fn from_args(init_cmd: InitCommand, sui_args: SuiInitArgs) -> Self {
-        let InitCommand { named_addresses } = init_cmd;
-        let SuiInitArgs {
-            accounts,
-            protocol_version,
-            max_gas,
-            shared_object_deletion,
-            simulator,
-            custom_validator_account,
-            reference_gas_price,
-            default_gas_price,
-            snapshot_config,
-            flavor,
-            epochs_to_keep,
-            data_ingestion_path,
-            rest_api_url,
-        } = sui_args;
-
-        let map = verify_and_create_named_address_mapping(named_addresses).unwrap();
-        let accounts = accounts
-            .map(|v| v.into_iter().collect::<BTreeSet<_>>())
-            .unwrap_or_default();
-
-        let mut protocol_config = if let Some(protocol_version) = protocol_version {
-            ProtocolConfig::get_for_version(protocol_version.into(), Chain::Unknown)
-        } else {
-            ProtocolConfig::get_for_max_version_UNSAFE()
-        };
-        if let Some(enable) = shared_object_deletion {
-            protocol_config.set_shared_object_deletion_for_testing(enable);
-        }
-        if let Some(mx_tx_gas_override) = max_gas {
-            if simulator {
-                panic!("Cannot set max gas in simulator mode");
-            }
-            protocol_config.set_max_tx_gas_for_testing(mx_tx_gas_override)
-        }
-        if custom_validator_account && !simulator {
-            panic!("Can only set custom validator account in simulator mode");
-        }
-        if reference_gas_price.is_some() && !simulator {
-            panic!("Can only set reference gas price in simulator mode");
-        }
-
-        let offchain_config = if simulator {
-            let retention_config =
-                epochs_to_keep.map(RetentionConfig::new_with_default_retention_only_for_testing);
-
-            Some(OffChainConfig {
-                snapshot_config,
-                retention_config,
-                data_ingestion_path: data_ingestion_path.unwrap_or(tempdir().unwrap().into_path()),
-                rest_api_url,
-            })
-        } else {
-            None
-        };
-
-        Self {
-            additional_mapping: map,
-            account_names: accounts,
-            protocol_config,
-            is_simulator: simulator,
-            custom_validator_account,
-            reference_gas_price,
-            default_gas_price,
-            flavor,
-            offchain_config,
-        }
-    }
 }
 
 #[async_trait]
@@ -319,7 +210,12 @@ impl<'a> MoveTestAdapter<'a> for SuiTestAdapter {
     fn default_syntax(&self) -> SyntaxChoice {
         self.default_syntax
     }
-
+    async fn cleanup_resources(&mut self) -> anyhow::Result<()> {
+        if let Some(cluster) = self.cluster.take() {
+            cluster.cleanup_resources().await;
+        }
+        Ok(())
+    }
     async fn init(
         default_syntax: SyntaxChoice,
         pre_compiled_deps: Option<Arc<FullyCompiledProgram>>,
@@ -338,7 +234,7 @@ impl<'a> MoveTestAdapter<'a> for SuiTestAdapter {
         );
 
         // Unpack the init arguments
-        let AdapterInitConfig {
+        let (
             additional_mapping,
             account_names,
             protocol_config,
@@ -346,11 +242,80 @@ impl<'a> MoveTestAdapter<'a> for SuiTestAdapter {
             custom_validator_account,
             reference_gas_price,
             default_gas_price,
+            snapshot_config,
             flavor,
-            offchain_config,
-        } = match task_opt.map(|t| t.command) {
-            Some((init_cmd, sui_args)) => AdapterInitConfig::from_args(init_cmd, sui_args),
-            None => AdapterInitConfig::default(),
+            epochs_to_keep,
+        ) = match task_opt.map(|t| t.command) {
+            Some((
+                InitCommand { named_addresses },
+                SuiInitArgs {
+                    accounts,
+                    protocol_version,
+                    max_gas,
+                    shared_object_deletion,
+                    simulator,
+                    custom_validator_account,
+                    reference_gas_price,
+                    default_gas_price,
+                    snapshot_config,
+                    flavor,
+                    epochs_to_keep,
+                },
+            )) => {
+                let map = verify_and_create_named_address_mapping(named_addresses).unwrap();
+                let accounts = accounts
+                    .map(|v| v.into_iter().collect::<BTreeSet<_>>())
+                    .unwrap_or_default();
+
+                let mut protocol_config = if let Some(protocol_version) = protocol_version {
+                    ProtocolConfig::get_for_version(protocol_version.into(), Chain::Unknown)
+                } else {
+                    ProtocolConfig::get_for_max_version_UNSAFE()
+                };
+                if let Some(enable) = shared_object_deletion {
+                    protocol_config.set_shared_object_deletion_for_testing(enable);
+                }
+                if let Some(mx_tx_gas_override) = max_gas {
+                    if simulator {
+                        panic!("Cannot set max gas in simulator mode");
+                    }
+                    protocol_config.set_max_tx_gas_for_testing(mx_tx_gas_override)
+                }
+                if custom_validator_account && !simulator {
+                    panic!("Can only set custom validator account in simulator mode");
+                }
+                if reference_gas_price.is_some() && !simulator {
+                    panic!("Can only set reference gas price in simulator mode");
+                }
+
+                (
+                    map,
+                    accounts,
+                    protocol_config,
+                    simulator,
+                    custom_validator_account,
+                    reference_gas_price,
+                    default_gas_price,
+                    snapshot_config,
+                    flavor,
+                    epochs_to_keep,
+                )
+            }
+            None => {
+                let protocol_config = ProtocolConfig::get_for_max_version_UNSAFE();
+                (
+                    BTreeMap::new(),
+                    BTreeSet::new(),
+                    protocol_config,
+                    false,
+                    false,
+                    None,
+                    None,
+                    SnapshotLagConfig::default(),
+                    None,
+                    None,
+                )
+            }
         };
 
         let (
@@ -362,8 +327,13 @@ impl<'a> MoveTestAdapter<'a> for SuiTestAdapter {
                 objects,
                 account_objects,
             },
-            read_replica,
+            cluster,
         ) = if is_simulator {
+            // TODO: (wlmyng) as of right now, we can't test per-table overrides until the pruner is
+            // updated
+            let retention_config =
+                epochs_to_keep.map(RetentionConfig::new_with_default_retention_only_for_testing);
+
             init_sim_executor(
                 rng,
                 account_names,
@@ -371,11 +341,8 @@ impl<'a> MoveTestAdapter<'a> for SuiTestAdapter {
                 &protocol_config,
                 custom_validator_account,
                 reference_gas_price,
-                offchain_config
-                    .as_ref()
-                    .unwrap()
-                    .data_ingestion_path
-                    .clone(),
+                snapshot_config,
+                retention_config,
             )
             .await
         } else {
@@ -387,11 +354,8 @@ impl<'a> MoveTestAdapter<'a> for SuiTestAdapter {
 
         let mut test_adapter = Self {
             is_simulator,
-            // This is opt-in and instantiated later
-            offchain_reader: None,
+            cluster,
             executor,
-            offchain_config,
-            read_replica,
             compiled_state: CompiledState::new(
                 named_address_mapping,
                 pre_compiled_deps,
@@ -612,40 +576,40 @@ impl<'a> MoveTestAdapter<'a> for SuiTestAdapter {
             }) => {
                 let file = data.ok_or_else(|| anyhow::anyhow!("Missing GraphQL query"))?;
                 let contents = std::fs::read_to_string(file.path())?;
-                let offchain_reader = self
-                    .offchain_reader
-                    .as_ref()
-                    .ok_or_else(|| anyhow::anyhow!("Offchain reader not set"))?;
+                let cluster = self.cluster.as_ref().unwrap();
                 let highest_checkpoint = self.executor.get_latest_checkpoint_sequence_number()?;
-                offchain_reader
+                cluster
                     .wait_for_checkpoint_catchup(highest_checkpoint, Duration::from_secs(60))
                     .await;
 
-                // wait_for_objects_snapshot_catchup(graphql_client, Duration::from_secs(180)).await;
+                cluster
+                    .wait_for_objects_snapshot_catchup(Duration::from_secs(180))
+                    .await;
 
-                if let Some(checkpoint_to_prune) = wait_for_checkpoint_pruned {
-                    offchain_reader
-                        .wait_for_pruned_checkpoint(checkpoint_to_prune, Duration::from_secs(60))
+                if let Some(wait_for_checkpoint_pruned) = wait_for_checkpoint_pruned {
+                    cluster
+                        .wait_for_checkpoint_pruned(
+                            wait_for_checkpoint_pruned,
+                            Duration::from_secs(60),
+                        )
                         .await;
                 }
 
                 let interpolated =
                     self.interpolate_query(&contents, &cursors, highest_checkpoint)?;
-                let resp = offchain_reader
-                    .execute_graphql(interpolated.trim().to_owned(), show_usage)
+                let resp = cluster
+                    .graphql_client
+                    .execute_to_graphql(interpolated.trim().to_owned(), show_usage, vec![], vec![])
                     .await?;
 
                 let mut output = vec![];
                 if show_headers {
-                    output.push(format!("Headers: {:#?}", resp.http_headers.unwrap()));
+                    output.push(format!("Headers: {:#?}", resp.http_headers_without_date()));
                 }
                 if show_service_version {
-                    output.push(format!(
-                        "Service version: {}",
-                        resp.service_version.unwrap()
-                    ));
+                    output.push(format!("Service version: {}", resp.graphql_version()?));
                 }
-                output.push(format!("Response: {}", resp.response_body));
+                output.push(format!("Response: {}", resp.response_body_json_pretty()));
 
                 Ok(Some(output.join("\n")))
             }
@@ -1199,10 +1163,6 @@ fn merge_output(left: Option<String>, right: Option<String>) -> Option<String> {
 }
 
 impl<'a> SuiTestAdapter {
-    pub fn with_offchain_reader(&mut self, offchain_reader: Box<dyn OffchainStateReader>) {
-        self.offchain_reader = Some(offchain_reader);
-    }
-
     pub fn is_simulator(&self) -> bool {
         self.is_simulator
     }
@@ -1949,22 +1909,6 @@ impl fmt::Display for FakeID {
     }
 }
 
-impl Default for AdapterInitConfig {
-    fn default() -> Self {
-        Self {
-            additional_mapping: BTreeMap::new(),
-            account_names: BTreeSet::new(),
-            protocol_config: ProtocolConfig::get_for_max_version_UNSAFE(),
-            is_simulator: false,
-            custom_validator_account: false,
-            reference_gas_price: None,
-            default_gas_price: None,
-            flavor: None,
-            offchain_config: None,
-        }
-    }
-}
-
 static NAMED_ADDRESSES: Lazy<BTreeMap<String, NumericalAddress>> = Lazy::new(|| {
     let mut map = move_stdlib::move_stdlib_named_addresses();
     assert!(map.get("std").unwrap().into_inner() == MOVE_STDLIB_ADDRESS);
@@ -2111,7 +2055,7 @@ async fn init_val_fullnode_executor(
 ) -> (
     Box<dyn TransactionalAdapter>,
     AccountSetup,
-    Option<Arc<dyn RpcStateReader + Send + Sync>>,
+    Option<ExecutorCluster>,
 ) {
     // Initial list of named addresses with specified values
     let mut named_address_mapping = NAMED_ADDRESSES.clone();
@@ -2177,11 +2121,12 @@ async fn init_sim_executor(
     protocol_config: &ProtocolConfig,
     custom_validator_account: bool,
     reference_gas_price: Option<u64>,
-    data_ingestion_path: PathBuf,
+    snapshot_config: SnapshotLagConfig,
+    retention_config: Option<RetentionConfig>,
 ) -> (
     Box<dyn TransactionalAdapter>,
     AccountSetup,
-    Option<Arc<dyn RpcStateReader + Send + Sync>>,
+    Option<ExecutorCluster>,
 ) {
     // Initial list of named addresses with specified values
     let mut named_address_mapping = NAMED_ADDRESSES.clone();
@@ -2243,8 +2188,16 @@ async fn init_sim_executor(
             reference_gas_price,
             None,
         );
-
+    let data_ingestion_path = tempdir().unwrap().into_path();
     sim.set_data_ingestion_path(data_ingestion_path.clone());
+
+    let cluster = serve_executor(
+        Arc::new(read_replica),
+        Some(snapshot_config),
+        retention_config,
+        data_ingestion_path,
+    )
+    .await;
 
     // Get the actual object values from the simulator
     for (name, (addr, kp)) in account_kps {
@@ -2303,7 +2256,7 @@ async fn init_sim_executor(
             account_objects,
             accounts,
         },
-        Some(Arc::new(read_replica)),
+        Some(cluster),
     )
 }
 

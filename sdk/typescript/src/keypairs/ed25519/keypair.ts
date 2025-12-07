@@ -1,7 +1,7 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-import { ed25519 } from '@noble/curves/ed25519';
+import nacl from 'tweetnacl';
 
 import {
 	decodeSuiPrivateKey,
@@ -41,16 +41,9 @@ export class Ed25519Keypair extends Keypair {
 	constructor(keypair?: Ed25519KeypairData) {
 		super();
 		if (keypair) {
-			this.keypair = {
-				publicKey: keypair.publicKey,
-				secretKey: keypair.secretKey.slice(0, 32),
-			};
+			this.keypair = keypair;
 		} else {
-			const privateKey = ed25519.utils.randomPrivateKey();
-			this.keypair = {
-				publicKey: ed25519.getPublicKey(privateKey),
-				secretKey: privateKey,
-			};
+			this.keypair = nacl.sign.keyPair();
 		}
 	}
 
@@ -65,11 +58,7 @@ export class Ed25519Keypair extends Keypair {
 	 * Generate a new random Ed25519 keypair
 	 */
 	static generate(): Ed25519Keypair {
-		const secretKey = ed25519.utils.randomPrivateKey();
-		return new Ed25519Keypair({
-			publicKey: ed25519.getPublicKey(secretKey),
-			secretKey,
-		});
+		return new Ed25519Keypair(nacl.sign.keyPair());
 	}
 
 	/**
@@ -102,16 +91,12 @@ export class Ed25519Keypair extends Keypair {
 				`Wrong secretKey size. Expected ${PRIVATE_KEY_SIZE} bytes, got ${secretKeyLength}.`,
 			);
 		}
-		const keypair = {
-			publicKey: ed25519.getPublicKey(secretKey),
-			secretKey,
-		};
-
+		const keypair = nacl.sign.keyPair.fromSeed(secretKey);
 		if (!options || !options.skipValidation) {
 			const encoder = new TextEncoder();
 			const signData = encoder.encode('sui validation');
-			const signature = ed25519.sign(signData, secretKey);
-			if (!ed25519.verify(signature, signData, keypair.publicKey)) {
+			const signature = nacl.sign.detached(signData, keypair.secretKey);
+			if (!nacl.sign.detached.verify(signData, signature, keypair.publicKey)) {
 				throw new Error('provided secretKey is invalid');
 			}
 		}
@@ -139,7 +124,7 @@ export class Ed25519Keypair extends Keypair {
 	 * Return the signature for the provided data using Ed25519.
 	 */
 	async sign(data: Uint8Array) {
-		return ed25519.sign(data, this.keypair.secretKey);
+		return nacl.sign.detached(data, this.keypair.secretKey);
 	}
 
 	/**

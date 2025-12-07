@@ -4,7 +4,6 @@
 use std::{sync::Arc, time::Instant};
 
 use consensus_config::{AuthorityIndex, Committee, NetworkKeyPair, Parameters, ProtocolKeyPair};
-use itertools::Itertools;
 use parking_lot::RwLock;
 use prometheus::Registry;
 use sui_protocol_config::{ConsensusNetwork, ProtocolConfig};
@@ -177,25 +176,11 @@ where
         registry: Registry,
         boot_counter: u64,
     ) -> Self {
-        assert!(
-            committee.is_valid_index(own_index),
-            "Invalid own index {}",
-            own_index
-        );
-        let own_hostname = &committee.authority(own_index).hostname;
         info!(
-            "Starting consensus authority {} {}, {:?}, boot counter {}",
-            own_index, own_hostname, protocol_config.version, boot_counter
+            "Starting consensus authority {}\n{:#?}\n{:#?}\n{:?}\nBoot counter: {}",
+            own_index, committee, parameters, protocol_config.version, boot_counter
         );
-        info!(
-            "Consensus authorities: {}",
-            committee
-                .authorities()
-                .map(|(i, a)| format!("{}: {}", i, a.hostname))
-                .join(", ")
-        );
-        info!("Consensus parameters: {:?}", parameters);
-        info!("Consensus committee: {:?}", committee);
+        assert!(committee.is_valid_index(own_index));
         let context = Arc::new(Context::new(
             own_index,
             committee,

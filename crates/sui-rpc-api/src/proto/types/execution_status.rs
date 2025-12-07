@@ -5,14 +5,14 @@ use tap::Pipe;
 // ExecutionStatus
 //
 
-impl From<sui_sdk_types::ExecutionStatus> for super::ExecutionStatus {
-    fn from(value: sui_sdk_types::ExecutionStatus) -> Self {
+impl From<sui_sdk_types::types::ExecutionStatus> for super::ExecutionStatus {
+    fn from(value: sui_sdk_types::types::ExecutionStatus) -> Self {
         match value {
-            sui_sdk_types::ExecutionStatus::Success => Self {
+            sui_sdk_types::types::ExecutionStatus::Success => Self {
                 success: Some(true),
                 status: None,
             },
-            sui_sdk_types::ExecutionStatus::Failure { error, command } => Self {
+            sui_sdk_types::types::ExecutionStatus::Failure { error, command } => Self {
                 success: Some(false),
                 status: Some(super::FailureStatus {
                     command,
@@ -23,7 +23,7 @@ impl From<sui_sdk_types::ExecutionStatus> for super::ExecutionStatus {
     }
 }
 
-impl TryFrom<&super::ExecutionStatus> for sui_sdk_types::ExecutionStatus {
+impl TryFrom<&super::ExecutionStatus> for sui_sdk_types::types::ExecutionStatus {
     type Error = TryFromProtoError;
 
     fn try_from(value: &super::ExecutionStatus) -> Result<Self, Self::Error> {
@@ -57,9 +57,9 @@ impl TryFrom<&super::ExecutionStatus> for sui_sdk_types::ExecutionStatus {
 // ExecutionError
 //
 
-impl From<sui_sdk_types::ExecutionError> for super::failure_status::ExecutionError {
-    fn from(value: sui_sdk_types::ExecutionError) -> Self {
-        use sui_sdk_types::ExecutionError::*;
+impl From<sui_sdk_types::types::ExecutionError> for super::failure_status::ExecutionError {
+    fn from(value: sui_sdk_types::types::ExecutionError) -> Self {
+        use sui_sdk_types::types::ExecutionError::*;
         match value {
             InsufficientGas => Self::InsufficientGas(()),
             InvalidGasObject => Self::InvalidGasObject(()),
@@ -165,7 +165,7 @@ impl From<sui_sdk_types::ExecutionError> for super::failure_status::ExecutionErr
     }
 }
 
-impl TryFrom<&super::failure_status::ExecutionError> for sui_sdk_types::ExecutionError {
+impl TryFrom<&super::failure_status::ExecutionError> for sui_sdk_types::types::ExecutionError {
     type Error = TryFromProtoError;
 
     fn try_from(value: &super::failure_status::ExecutionError) -> Result<Self, Self::Error> {
@@ -306,9 +306,9 @@ impl TryFrom<&super::failure_status::ExecutionError> for sui_sdk_types::Executio
 // CommandArgumentError
 //
 
-impl From<sui_sdk_types::CommandArgumentError> for super::command_argument_error::Kind {
-    fn from(value: sui_sdk_types::CommandArgumentError) -> Self {
-        use sui_sdk_types::CommandArgumentError::*;
+impl From<sui_sdk_types::types::CommandArgumentError> for super::command_argument_error::Kind {
+    fn from(value: sui_sdk_types::types::CommandArgumentError) -> Self {
+        use sui_sdk_types::types::CommandArgumentError::*;
 
         match value {
             TypeMismatch => Self::TypeMismatch(()),
@@ -334,7 +334,7 @@ impl From<sui_sdk_types::CommandArgumentError> for super::command_argument_error
     }
 }
 
-impl TryFrom<&super::command_argument_error::Kind> for sui_sdk_types::CommandArgumentError {
+impl TryFrom<&super::command_argument_error::Kind> for sui_sdk_types::types::CommandArgumentError {
     type Error = TryFromProtoError;
 
     fn try_from(value: &super::command_argument_error::Kind) -> Result<Self, Self::Error> {
@@ -378,9 +378,9 @@ impl TryFrom<&super::command_argument_error::Kind> for sui_sdk_types::CommandArg
 // TypeArgumentError
 //
 
-impl From<sui_sdk_types::TypeArgumentError> for super::type_argument_error::Kind {
-    fn from(value: sui_sdk_types::TypeArgumentError) -> Self {
-        use sui_sdk_types::TypeArgumentError::*;
+impl From<sui_sdk_types::types::TypeArgumentError> for super::type_argument_error::Kind {
+    fn from(value: sui_sdk_types::types::TypeArgumentError) -> Self {
+        use sui_sdk_types::types::TypeArgumentError::*;
 
         match value {
             TypeNotFound => Self::TypeNotFound(()),
@@ -389,7 +389,7 @@ impl From<sui_sdk_types::TypeArgumentError> for super::type_argument_error::Kind
     }
 }
 
-impl TryFrom<&super::type_argument_error::Kind> for sui_sdk_types::TypeArgumentError {
+impl TryFrom<&super::type_argument_error::Kind> for sui_sdk_types::types::TypeArgumentError {
     type Error = TryFromProtoError;
 
     fn try_from(value: &super::type_argument_error::Kind) -> Result<Self, Self::Error> {
@@ -407,9 +407,9 @@ impl TryFrom<&super::type_argument_error::Kind> for sui_sdk_types::TypeArgumentE
 // PackageUpgradeError
 //
 
-impl From<sui_sdk_types::PackageUpgradeError> for super::package_upgrade_error::Kind {
-    fn from(value: sui_sdk_types::PackageUpgradeError) -> Self {
-        use sui_sdk_types::PackageUpgradeError::*;
+impl From<sui_sdk_types::types::PackageUpgradeError> for super::package_upgrade_error::Kind {
+    fn from(value: sui_sdk_types::types::PackageUpgradeError) -> Self {
+        use sui_sdk_types::types::PackageUpgradeError::*;
 
         match value {
             UnableToFetchPackage { package_id } => Self::UnableToFetchPackage(package_id.into()),
@@ -428,7 +428,7 @@ impl From<sui_sdk_types::PackageUpgradeError> for super::package_upgrade_error::
     }
 }
 
-impl TryFrom<&super::package_upgrade_error::Kind> for sui_sdk_types::PackageUpgradeError {
+impl TryFrom<&super::package_upgrade_error::Kind> for sui_sdk_types::types::PackageUpgradeError {
     type Error = TryFromProtoError;
 
     fn try_from(value: &super::package_upgrade_error::Kind) -> Result<Self, Self::Error> {
@@ -469,8 +469,8 @@ impl TryFrom<&super::package_upgrade_error::Kind> for sui_sdk_types::PackageUpgr
 // MoveLocation
 //
 
-impl From<sui_sdk_types::MoveLocation> for super::MoveLocation {
-    fn from(value: sui_sdk_types::MoveLocation) -> Self {
+impl From<sui_sdk_types::types::MoveLocation> for super::MoveLocation {
+    fn from(value: sui_sdk_types::types::MoveLocation) -> Self {
         Self {
             package: Some(value.package.into()),
             module: Some(value.module.into()),
@@ -481,7 +481,7 @@ impl From<sui_sdk_types::MoveLocation> for super::MoveLocation {
     }
 }
 
-impl TryFrom<&super::MoveLocation> for sui_sdk_types::MoveLocation {
+impl TryFrom<&super::MoveLocation> for sui_sdk_types::types::MoveLocation {
     type Error = TryFromProtoError;
 
     fn try_from(value: &super::MoveLocation) -> Result<Self, Self::Error> {

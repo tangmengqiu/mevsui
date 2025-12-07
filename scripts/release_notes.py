@@ -42,6 +42,7 @@ INTERESTING_DIRECTORIES = [
     "docker",
     "external-crates",
     "kiosk",
+    "narwhal",
     "nre",
     "sui-execution",
 ]
@@ -52,18 +53,17 @@ INTERESTING_DIRECTORIES = [
 NOTE_ORDER = [
     "Protocol",
     "Nodes (Validators and Full nodes)",
-    "gRPC",
+    "Indexer",
     "JSON-RPC",
     "GraphQL",
     "CLI",
     "Rust SDK",
+    "REST API",
 ]
-
 
 class Note(NamedTuple):
     checked: bool
     note: str
-
 
 def parse_args():
     """Parse command line arguments."""
@@ -110,11 +110,9 @@ def parse_args():
 
     return vars(parser.parse_args())
 
-
 def git(*args):
     """Run a git command and return the output as a string."""
     return subprocess.check_output(["git"] + list(args)).decode().strip()
-
 
 def parse_notes(pr, notes):
     # # Find the release notes section
@@ -148,7 +146,6 @@ def parse_notes(pr, notes):
 
     return pr, result
 
-
 def extract_notes_for_pr(pr):
     """Get release notes from a body of the PR
 
@@ -170,12 +167,10 @@ def extract_notes_for_pr(pr):
     ]
 
     # Execute the curl command
-    result = subprocess.run(
-        curl_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    result = subprocess.run(curl_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     json_data = json.loads(result.stdout)
     notes = json_data.get("body")
     return parse_notes(pr, notes)
-
 
 def extract_notes_for_commit(commit):
     """Get release notes from a commit message.
@@ -195,7 +190,6 @@ def extract_notes_for_commit(commit):
     match = RE_PR.match(message)
     pr = match.group(1) if match else None
     return parse_notes(pr, message)
-
 
 def extract_protocol_version(commit):
     """Find the max protocol version at this commit.
@@ -217,7 +211,6 @@ def extract_protocol_version(commit):
 
         return match[0]
 
-
 def print_changelog(pr, log):
     if pr:
         print(f"https://github.com/MystenLabs/sui/pull/{pr}:")
@@ -232,7 +225,7 @@ def do_check(pr):
     area is known.
 
     """
-
+    
     pr, notes = extract_notes_for_pr(pr)
     issues = []
     for impacted, note in notes.items():
@@ -240,8 +233,7 @@ def do_check(pr):
             issues.append(f" - Found unfamiliar impact area '{impacted}'.")
 
         if note.checked and not note.note:
-            issues.append(
-                f" - '{impacted}' is checked but has no release note.")
+            issues.append(f" - '{impacted}' is checked but has no release note.")
 
         if not note.checked and note.note:
             issues.append(
@@ -255,7 +247,6 @@ def do_check(pr):
     for issue in issues:
         print(issue)
     sys.exit(1)
-
 
 def do_generate(from_, to):
     """Generate release notes from git commits.
@@ -317,7 +308,6 @@ def do_generate(from_, to):
         for pr, note in reversed(notes):
             print_changelog(pr, note)
             print()
-
 
 args = parse_args()
 if args["command"] == "generate":

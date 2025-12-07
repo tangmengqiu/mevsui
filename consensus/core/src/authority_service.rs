@@ -11,7 +11,7 @@ use parking_lot::RwLock;
 use sui_macros::fail_point_async;
 use tokio::{sync::broadcast, time::sleep};
 use tokio_util::sync::ReusableBoxFuture;
-use tracing::{debug, info, warn};
+use tracing::{debug, info, trace, warn};
 
 use crate::{
     block::{BlockAPI as _, BlockRef, SignedBlock, VerifiedBlock, GENESIS_ROUND},
@@ -114,8 +114,8 @@ impl<C: CoreThreadDispatcher> NetworkService for AuthorityService<C> {
             return Err(e);
         }
         let verified_block = VerifiedBlock::new_verified(signed_block, serialized_block);
-        let block_ref = verified_block.reference();
-        debug!("Received block {} via send block.", block_ref);
+
+        trace!("Received block {verified_block} via send block.");
 
         // Reject block with timestamp too far in the future.
         let now = self.context.clock.timestamp_utc_ms();
@@ -130,12 +130,12 @@ impl<C: CoreThreadDispatcher> NetworkService for AuthorityService<C> {
                 .inc();
             debug!(
                 "Block {:?} timestamp ({} > {}) is too far in the future, rejected.",
-                block_ref,
+                verified_block.reference(),
                 verified_block.timestamp_ms(),
                 now,
             );
             return Err(ConsensusError::BlockRejected {
-                block_ref,
+                block_ref: verified_block.reference(),
                 reason: format!(
                     "Block timestamp is too far in the future: {} > {}",
                     verified_block.timestamp_ms(),
@@ -154,7 +154,7 @@ impl<C: CoreThreadDispatcher> NetworkService for AuthorityService<C> {
                 .inc_by(forward_time_drift.as_millis() as u64);
             debug!(
                 "Block {:?} timestamp ({} > {}) is in the future, waiting for {}ms",
-                block_ref,
+                verified_block.reference(),
                 verified_block.timestamp_ms(),
                 now,
                 forward_time_drift.as_millis(),
@@ -189,12 +189,12 @@ impl<C: CoreThreadDispatcher> NetworkService for AuthorityService<C> {
                 .inc();
             debug!(
                 "Block {:?} is rejected because last commit index is lagging quorum commit index too much ({} < {})",
-                block_ref,
+                verified_block.reference(),
                 last_commit_index,
                 quorum_commit_index,
             );
             return Err(ConsensusError::BlockRejected {
-                block_ref,
+                block_ref: verified_block.reference(),
                 reason: format!(
                     "Last commit index is lagging quorum commit index too much ({} < {})",
                     last_commit_index, quorum_commit_index,
