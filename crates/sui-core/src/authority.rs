@@ -269,7 +269,7 @@ const BABY_SWAP_EVENT: &str =
 const BLUE_MOVE_SWAP_EVENT: &str =
     "0xb24b6789e088b876afabca733bed2299fbc9e2d6369be4d1acfa17d8145454d9::swap::Swap_Event";// verified
 const BLUE_FIN_SWAP_EVENT: &str =
-    "0x3492c874c1e3b3e2984e8c41b589e642d4d0a5d6459e5a9cfc2d52fd7c89c267::events::AssetSwap" // new added
+    "0x3492c874c1e3b3e2984e8c41b589e642d4d0a5d6459e5a9cfc2d52fd7c89c267::events::AssetSwap"; // new added
 const CETUS_SWAP_EVENT: &str =
     "0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::pool::SwapEvent"; //verified
 const DEEPBOOK_V3_INTERNAL_SWAP_EVENT: &str =
@@ -289,9 +289,9 @@ const SUISWAP_SWAP_EVENT: &str =
 const TURBOS_SWAP_EVENT: &str =
     "0x91bfbc386a41afcfd9b2533058d7e915a1d3829089cc268ff4333d54d6339ca1::pool::SwapEvent";// verified
 const MMT_SWAP_EVENT: &str =
-    "0x70285592c97965e811e0c6f98dccc3a9c2b4ad854b3594faab9597ada267b860::trade::SwapEvent" //new added
+    "0x70285592c97965e811e0c6f98dccc3a9c2b4ad854b3594faab9597ada267b860::trade::SwapEvent"; //new added
 const MAGMA_SWAP_EVENT: &str =
-    "0x4a35d3dfef55ed3631b7158544c6322a23bc434fe4fca1234cb680ce0505f82d::pool::SwapEvent"// new added
+    "0x4a35d3dfef55ed3631b7158544c6322a23bc434fe4fca1234cb680ce0505f82d::pool::SwapEvent";// new added
 
 #[allow(dead_code)]
 const fn swap_events() -> [&'static str; 12] {
