@@ -294,7 +294,7 @@ const MAGMA_SWAP_EVENT: &str =
     "0x4a35d3dfef55ed3631b7158544c6322a23bc434fe4fca1234cb680ce0505f82d::pool::SwapEvent";// new added
 
 #[allow(dead_code)]
-const fn swap_events() -> [&'static str; 12] {
+const fn swap_events() -> [&'static str; 16] {
     [
         ABEX_SWAP_EVENT,
         AFTERMATH_SWAP_EVENT,
