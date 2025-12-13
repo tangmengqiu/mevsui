@@ -273,7 +273,7 @@ const BLUE_FIN_SWAP_EVENT: &str =
 const CETUS_SWAP_EVENT: &str =
     "0x1eabed72c53feb3805120a081dc15963c204dc8d091542592abaf7a35689b2fb::pool::SwapEvent"; //verified
 const DEEPBOOK_V3_INTERNAL_SWAP_EVENT: &str =
-    "0x79bd71317665179f4f6025df6c478d9ed47fd281c9335c4c51e1ba0996010519::deepbook_v3::DeepbookV3InternalSwapEvent" //new added
+    "0x79bd71317665179f4f6025df6c478d9ed47fd281c9335c4c51e1ba0996010519::deepbook_v3::DeepbookV3InternalSwapEvent"; //new added
 const FLOWX_AMM_SWAP_EVENT: &str =
     "0xba153169476e8c3114962261d1edc70de5ad9781b83cc617ecc8c1923191cae0::pair::Swapped"; //verified
 const FLOWX_CLMM_SWAP_EVENT: &str =
