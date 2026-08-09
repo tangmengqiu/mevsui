@@ -286,7 +286,8 @@ impl TransactionExecutionApi {
             &object_cache,
             &transaction_effects,
             input_objs,
-            mock_gas,
+            // [relay-patch] mocked_coin 已改为 Option<Vec<ObjectID>>
+            mock_gas.map(|id| vec![id]),
         )
         .await?;
         let object_changes = get_object_changes(
