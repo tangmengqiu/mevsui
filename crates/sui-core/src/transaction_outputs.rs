@@ -277,10 +277,9 @@ impl TransactionOutputs {
             locks_to_delete: serializable.locks_to_delete,
             new_locks_to_init: serializable.new_locks_to_init,
             written: serializable.written,
-            //mqtang verify this
-            output_keys: vec![],
+            // v1.76.1: output_keys 字段已移除；accumulator_events 改为 Option
             unchanged_loaded_runtime_objects: vec![],
-            accumulator_events: Mutex::new(vec![]),
+            accumulator_events: Mutex::new(None),
         }
     }
 }
