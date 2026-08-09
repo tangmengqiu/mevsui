@@ -2643,22 +2643,27 @@ impl AuthorityState {
 
         let expensive_checks = false;
         let object_cache = ObjectCache::new(Arc::clone(self.get_backing_store()), override_objects);
-        let (inner_temp_store, _, effects,_timings, _execution_error, ) = executor
+        let (inner_temp_store, _, effects, _timings, _execution_error) = executor
             .execute_transaction_to_effects(
                 &object_cache,
                 protocol_config,
-                self.metrics.limits_metrics.clone(),
+                // [relay-patch] v1.76.1: limits_metrics 已改名为 execution_metrics
+                self.metrics.execution_metrics.clone(),
                 expensive_checks,
-                ExecutionOrEarlyError::Ok(()), 
+                ExecutionOrEarlyError::Ok(()),
                 &epoch_store.epoch_start_config().epoch_data().epoch_id(),
                 epoch_store
                     .epoch_start_config()
                     .epoch_data()
                     .epoch_start_timestamp(),
                 checked_input_objects,
+                // [relay-patch] v1.76.1 新增：dry-run 不涉及系统对象版本约束
+                BTreeMap::new(),
                 gas_data,
                 gas_status,
                 kind,
+                // [relay-patch] v1.76.1 新增：不做 coin reservation 重写
+                None,
                 signer,
                 transaction_digest,
                 &mut None,
