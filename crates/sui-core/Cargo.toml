@@ -103,6 +103,8 @@ sui-types.workspace = true
 nonempty.workspace = true
 zstd.workspace = true
 
+interprocess.workspace = true
+
 [dev-dependencies]
 sui-move-build.workspace = true
 clap.workspace = true

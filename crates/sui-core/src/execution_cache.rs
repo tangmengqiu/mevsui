@@ -236,6 +236,7 @@ pub trait ObjectCacheRead: Send + Sync {
                 None => {
                     let live_objref = self._get_live_objref(object_ref.0)?;
                     let error = if live_objref.1 >= object_ref.1 {
+                        tracing::error!("unavailable multi_get_objects_with_more_accurate_error_return {:?} {:?}", object_ref, live_objref);
                         UserInputError::ObjectVersionUnavailableForConsumption {
                             provided_obj_ref: *object_ref,
                             current_version: live_objref.1,
@@ -629,6 +630,14 @@ pub trait ExecutionCacheWrite: Send + Sync {
     /// Used to validate transaction input before submitting or voting to accept the transaction.
     fn validate_owned_object_versions(&self, owned_input_objects: &[ObjectRef]) -> SuiResult;
 
+    // [relay-patch] 供 cache_update_handler 在收到节点推送时刷新包缓存
+    fn update_package_cache<'a>(
+        &'a self,
+        package_updates: &'a [(ObjectID, Object)],
+    ) -> BoxFuture<'a, SuiResult>;
+
+    fn reload_objects(&self, objects: Vec<(ObjectID, Object)>);
+    fn update_underlying(&self, clear_cache: bool);
     /// Write an object entry directly to the cache for testing.
     /// This allows us to write an object without constructing the entire
     /// transaction outputs.

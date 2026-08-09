@@ -387,7 +387,7 @@ http-body = "1"
 http-body-util = "0.1"
 humantime = "2.1.0"
 hyper = "1"
-hyper-util = "0.1.6"
+hyper-util = "0.1"
 hyper-rustls = { version = "0.27", default-features = false, features = [
   "webpki-roots",
   "http1",
@@ -403,6 +403,8 @@ inquire = "0.6.0"
 insta = { version = "1.46.2", features = ["redactions", "yaml", "json"] }
 insta-cmd = "0.6.0"
 integer-encoding = "3.0.1"
+# [relay-patch] IPC socket 通道依赖
+interprocess = { version = "2", features = ["tokio"] }
 iso8601 = "0.6.3"
 itertools = "0.13.0"
 tikv-jemalloc-ctl = "^0.5"

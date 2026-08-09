@@ -257,7 +257,6 @@ pub struct SuiNode {
     /// The http servers responsible for serving RPC traffic (gRPC and JSON-RPC)
     #[allow(unused)]
     http_servers: HttpServers,
-
     state: Arc<AuthorityState>,
     transaction_orchestrator: Option<Arc<TransactionOrchestrator<NetworkAuthorityClient>>>,
     registry_service: RegistryService,
@@ -876,6 +875,7 @@ impl SuiNode {
         } else {
             None
         };
+        let metrics = Arc::new(JsonRpcMetrics::new(&prometheus_registry));
 
         let (http_servers, subscription_service_checkpoint_sender) = build_http_servers(
             state.clone(),
